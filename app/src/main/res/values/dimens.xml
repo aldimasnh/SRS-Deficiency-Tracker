@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="splashSSMS">30sp</dimen>
+    <dimen name="roundedCard">45dp</dimen>
+    <dimen name="roundedCardHPT">25dp</dimen>
+    <dimen name="roundedCardBaris">8dp</dimen>
+    <dimen name="strokeCard">1dp</dimen>
+    <dimen name="cardInsidePadding">10dp</dimen>
+    <dimen name="underline">5dp</dimen>
+    <dimen name="icMenu">100dp</dimen>
+    <dimen name="icMenuText">23sp</dimen>
+    <dimen name="marginMenuIC">10dp</dimen>
+    <dimen name="tvWidthPanenTBS">130dp</dimen>
+    <dimen name="marginTopPanen">10dp</dimen>
+    <dimen name="textSizePanen">20sp</dimen>
+    <dimen name="strokeWidthSpinner">0.5dp</dimen>
+    <dimen name="textSizeSpinnerPanen">18sp</dimen>
+    <dimen name="marginLeftSpinnerPanen">10dp</dimen>
+    <dimen name="font_size_hasil_baris">15sp</dimen>
+    <dimen name="checkbox_margin">-10dp</dimen>
+
+    <dimen name="desc_padding">40dp</dimen>
+    <dimen name="slide_desc">16dp</dimen>
+    <dimen name="marginTopPupuk">5dp</dimen>
+</resources>

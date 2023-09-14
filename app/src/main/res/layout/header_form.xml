@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/mc_atas_mainGudang"
+        android:layout_width="0dp"
+        android:layout_height="90dp"
+        android:translationY="-20dp"
+        android:backgroundTint="@color/grey"
+        app:strokeColor="@color/grey_card"
+        app:strokeWidth="0.5dp"
+        app:cardCornerRadius="20dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="horizontal"
+            android:layout_marginTop="25dp"
+            android:layout_marginBottom="5dp"
+            android:layout_marginHorizontal="15dp"
+            android:weightSum="2">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:gravity="center|start"
+                android:layout_weight="1.1">
+
+                <TextView
+                    android:id="@+id/tv_ver_app_header_gudang"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="versi app: "
+                    android:textSize="13sp"/>
+
+                <TextView
+                    android:id="@+id/tv_update_header_gudang"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="update: "
+                    android:textSize="13sp" />
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:gravity="center|end"
+                android:layout_weight="0.9"
+                android:weightSum="2">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center"
+                    android:layout_weight="1">
+
+                    <ImageView
+                        android:id="@+id/icLocationHeader"
+                        android:layout_marginTop="1dp"
+                        android:layout_width="30dp"
+                        android:layout_height="30dp"
+                        android:src="@drawable/ic_location_off_black_32dp"/>
+
+                    <ImageView
+                        android:id="@+id/ic_gudang_wh"
+                        android:layout_marginTop="1dp"
+                        android:layout_width="30dp"
+                        android:layout_height="30dp"
+                        android:src="@drawable/baseline_map_24" />
+
+                    <TextView
+                        android:id="@+id/tv_gudang_main"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="MAPS"
+                        android:fontFamily="@font/seguisb"
+                        android:textColor="@color/black"
+                        android:textSize="23sp" />
+
+                </LinearLayout>
+
+                <TextView
+                    android:visibility="gone"
+                    android:id="@+id/tv_accuracy"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="13sp"
+                    android:layout_weight="1"/>
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+    </com.google.android.material.card.MaterialCardView>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

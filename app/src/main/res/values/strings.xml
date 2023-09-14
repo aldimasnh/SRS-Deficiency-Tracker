@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">SRS Deficiency Tracker</string>
+    <string name="selamat_datang">Selamat Datang!</string>
+    <string name="userDummy">Elon Musk</string>
+    <string name="update_desc">Pastikan jaringan anda stabil atau matikan jaringan untuk menggunakan mode offline</string>
+    <string name="terbaru">TERBARU!</string>
+</resources>

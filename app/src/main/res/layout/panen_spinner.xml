@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center"
+    android:layout_marginTop="@dimen/marginTopPanen"
+    android:id="@+id/parentSpPanenTBS"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+        <TextView
+            android:layout_width="@dimen/tvWidthPanenTBS"
+            android:layout_height="match_parent"
+            android:text="Loading.."
+            android:textSize="@dimen/textSizePanen"
+            android:id="@+id/tvPanenTBS"
+            android:gravity="center|left"
+            tools:ignore="HardcodedText,RtlHardcoded" />
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_marginLeft="5dp"
+            app:strokeWidth="@dimen/strokeWidthSpinner"
+            app:strokeColor="@color/border_grey">
+            <com.jaredrummler.materialspinner.MaterialSpinner
+                android:layout_marginStart="@dimen/marginLeftSpinnerPanen"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/seguisb"
+                android:textSize="@dimen/textSizeSpinnerPanen"
+                android:id="@+id/spPanenTBS"
+                app:ms_text_color="@color/black"
+                app:ms_hint="Pilih Arah"
+                app:ms_arrow_tint="@color/colorMainSSMSPurple"/>
+            <com.jaredrummler.materialspinner.MaterialSpinner
+                android:layout_marginStart="@dimen/marginLeftSpinnerPanen"
+                android:visibility="gone"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/seguisb"
+                android:textSize="@dimen/textSizeSpinnerPanen"
+                android:id="@+id/spPanenTBS1"
+                app:ms_text_color="@color/black"
+                app:ms_arrow_tint="@color/colorMainSSMSPurple"/>
+        </com.google.android.material.card.MaterialCardView>
+</LinearLayout>

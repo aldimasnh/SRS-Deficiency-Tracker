@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="colorPrimary">#6CC24A</color>
+    <color name="colorPrimaryDark">#3700B3</color>
+    <color name="colorAccent">#7884F8</color>
+
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+
+    <color name="colorMainSSMSPurple">#606EB2</color>
+    <color name="border_grey">#708090</color>
+    <color name="colorLightGray">#D8D8D8</color>
+    <color name="ssmsPantone">#6CC24A</color>
+    <color name="colorRed_A400">#FF1744</color>
+    <color name="chart_red4">#D32F2F</color>
+    <color name="yellowMain">#D6AE14</color>
+    <color name="green_basiccolor">#32CD32</color>
+    <color name="grey_default">#707070</color>
+    <color name="grey">#EEEEEE</color>
+    <color name="grey_card">#ACACAC</color>
+    <color name="chart_blue4">#0277BD</color>
+    <color name="low">#FFC107</color>
+</resources>
