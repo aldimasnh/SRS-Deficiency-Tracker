@@ -51,6 +51,13 @@ class PrefManagerEstate(_context: Context) {
             editor.commit()
         }
 
+    var blokPlot: String?
+        get() = pref.getString("blokPlot", null)
+        set(blokPlot) {
+            editor.putString("blokPlot", blokPlot)
+            editor.commit()
+        }
+
     var afdeling: String?
         get() = pref.getString("afd", null)
         set(afdeling) {

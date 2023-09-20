@@ -12,7 +12,18 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
 
+    <include
+        android:id="@+id/temuanPupuk"
+        layout="@layout/activity_foto_temuan"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/header_hand"/>
+
     <ScrollView
+        android:id="@+id/svMainPupuk"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         app:layout_constraintEnd_toEndOf="parent"
@@ -89,5 +100,15 @@
         app:sdMainFabClosedIconColor="@color/white"
         app:sdMainFabClosedSrc="@drawable/ic_apps_black_24dp"
         app:sdMainFabOpenedBackgroundColor="@color/low" />
+
+    <include
+        android:id="@+id/zoomPupuk"
+        layout="@layout/zoom_foto_layout"
+        android:visibility="gone" />
+
+    <include
+        android:id="@+id/lyCameraPupuk"
+        layout="@layout/activity_camera"
+        android:visibility="gone" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

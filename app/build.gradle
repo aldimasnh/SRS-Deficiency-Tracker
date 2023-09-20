@@ -7,7 +7,7 @@ plugins {
 android {
     def versionMajor = 1
     def versionMinor = 0
-    def versionPatch = 0
+    def versionPatch = 1
 
     namespace 'com.srs.deficiencytracker'
     compileSdk 33
@@ -69,6 +69,10 @@ dependencies {
     implementation 'org.apache.httpcomponents:httpcore:4.4.13'
     implementation 'com.karumi:dexter:6.2.3'
     implementation "com.leinardi.android:speed-dial:3.1.1"
+    implementation 'com.google.android.gms:play-services-location:17.0.0'
+    implementation 'com.github.matecode:Snacky:1.1.4'
+    implementation 'com.github.chrisbanes:PhotoView:2.0.0'
+    implementation("com.squareup.okhttp3:okhttp:4.10.0")
 
     implementation 'org.osmdroid:osmdroid-android:6.1.11'
 }

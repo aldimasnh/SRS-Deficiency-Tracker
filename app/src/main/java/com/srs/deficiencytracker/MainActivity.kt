@@ -18,6 +18,7 @@ import com.karumi.dexter.listener.PermissionRequest
 import com.karumi.dexter.listener.multi.MultiplePermissionsListener
 import com.srs.deficiencytracker.activity.FormMapsActivity
 import com.srs.deficiencytracker.activity.MapsActivity
+import com.srs.deficiencytracker.activity.PkKuningListActivity
 import com.srs.deficiencytracker.activity.WebViewActivity
 import com.srs.deficiencytracker.database.PemupukanSQL
 import com.srs.deficiencytracker.utilities.AlertDialogUtility
@@ -52,8 +53,6 @@ class MainActivity : AppCompatActivity() {
 
         mapsAndPkKuning.leftIconSrc.setImageResource(R.drawable.baseline_map_24)
         mapsAndPkKuning.rightIconSrc.setImageResource(R.drawable.ic_cloud_upload_black_24dp)
-        mapsAndPkKuning.rightIconSrc.backgroundTintList =
-            ContextCompat.getColorStateList(this, R.color.grey_default)
 
         treeAndBlok.leftIconSrc.setImageResource(R.drawable.ic_palm_tree_24)
         treeAndBlok.rightIconSrc.setImageResource(R.drawable.baseline_update_24)
@@ -77,7 +76,8 @@ class MainActivity : AppCompatActivity() {
             startActivity(intent)
         }
         mapsAndPkKuning.rightIconTap.setOnClickListener {
-
+            val intent = Intent(this, PkKuningListActivity::class.java)
+            startActivity(intent)
         }
         treeAndBlok.leftIconTap.setOnClickListener {
 

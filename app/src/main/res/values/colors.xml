@@ -9,6 +9,7 @@
 
     <color name="colorMainSSMSPurple">#606EB2</color>
     <color name="border_grey">#708090</color>
+    <color name="whitetrans">#73FFFFFF</color>
     <color name="colorLightGray">#D8D8D8</color>
     <color name="ssmsPantone">#6CC24A</color>
     <color name="colorRed_A400">#FF1744</color>
@@ -20,4 +21,6 @@
     <color name="grey_card">#ACACAC</color>
     <color name="chart_blue4">#0277BD</color>
     <color name="low">#FFC107</color>
+    <color name="colorGreen_A400">#00E676</color>
+    <color name="dashboard">#FB8C00</color>
 </resources>

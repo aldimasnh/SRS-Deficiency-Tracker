@@ -53,6 +53,7 @@ class ChecklistEstate : AppCompatActivity() {
                             val option = dataListEstArray.getString(i)
                             estArray.add(option)
                         }
+                        estArray.sort()
 
                         val marginBetweenCheckboxes =
                             resources.getDimensionPixelSize(R.dimen.checkbox_margin)

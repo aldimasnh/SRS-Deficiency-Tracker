@@ -7,6 +7,7 @@ import android.database.sqlite.SQLiteOpenHelper
 import android.content.ContentValues
 import android.database.Cursor
 import android.database.sqlite.SQLiteException
+import android.util.Log
 import androidx.room.PrimaryKey
 import kotlin.collections.ArrayList
 
@@ -21,83 +22,51 @@ class PemupukanSQL(context: Context) : SQLiteOpenHelper(
         const val DATABASE_VERSION = 1
         const val db_pupuk = "db_pupuk"
 
-        const val db_tab_meka_pupuk = "mekanisasi_pemupukan"
-        const val db_lat = "lat"
-        const val db_lon = "lon"
-        const val db_datetime = "datetime"
-        const val db_menu = "menu"
-        const val db_app_ver = "app_version"
-        const val db_archive = "archive"
-
-        const val db_p = "P"
-        const val db_pp = "PP"
-        const val db_mp = "MP"
-        const val db_pk = "PK"
-
         const val db_tabPupuk = "pupuk"
+        const val db_tabPkKuning = "pokok_kuning"
+
+        // DB List Pupuk
         const val db_id = "id"
         const val db_namaPupuk = "nama"
 
-        const val db_tabPemupukan = "pemupukan"
+        // DB Pokok Kuning
+        const val db_idPk = "idPk"
         const val db_estate = "estate"
         const val db_afdeling = "afdeling"
         const val db_blok = "blok"
+        const val db_status = "status"
+        const val db_kondisi = "kondisi"
+        const val db_datetime = "datetime"
         const val db_jenisPupukID = "jenis_pupuk_id"
         const val db_dosisPupuk = "dosis_pupuk"
-        const val db_baris1 = "baris1"
-        const val db_baris2 = "baris2"
-        const val db_dipupukArr = "dipupuk"
-        const val db_name = "nama"
-        const val db_waktuMulai = "waktu_mulai"
-        const val db_waktuSelesai = "waktu_selesai"
-        const val db_userId = "user_id"
-        const val db_arah = "arah"
-        const val db_latAwal = "lat_awal"
-        const val db_lonAwal = "lon_awal"
-        const val db_latAkhir = "lat_akhir"
-        const val db_lonAkhir = "lon_akhir"
-        const val db_jenisPupukArr = "jenis_pupuk"
-        const val db_lokasiPupukArr = "lokasi_pupuk"
-        const val db_sebarPupukArr = "sebar_pupuk"
+        const val db_metode = "metode"
         const val db_photo = "foto"
         const val db_komen = "komentar"
-        const val db_temuan = "temuan"
-        const val db_jumlah_pokok = "jumlah_pokok"
-
-        // Preparasi Pemupukan
-        const val db_tabPreparasi = "preparasi"
-        const val db_kjp = "kjp"
-        const val db_apd = "apd"
-        const val db_kwp = "kwp"
-        const val db_karyawanArr = "karyawan"
-        const val db_taraArr = "tara"
-        const val db_brutoArr = "bruto"
-        const val db_nettoArr = "netto"
-        const val db_takaranArr = "kali"
-
-        // Pokok Kuning
-        const val db_tabPkKuning = "pokok_kuning"
-        const val db_pokok = "pokok"
-        const val db_baris = "baris"
-        const val db_status_pemupukan = "status_pemupukan"
+        const val db_app_ver = "app_version"
+        const val db_archive = "archive"
     }
 
     @PrimaryKey(autoGenerate = true)
     override fun onCreate(db: SQLiteDatabase?) {
         val createTablePupuk =
             ("CREATE TABLE $db_tabPupuk ($db_id INTEGER PRIMARY KEY, $db_namaPupuk VARCHAR)")
+        val createTablePkKuning =
+            ("CREATE TABLE $db_tabPkKuning ($db_id INTEGER PRIMARY KEY, $db_idPk INTEGER, $db_estate VARCHAR, $db_afdeling VARCHAR, $db_blok VARCHAR, $db_status VARCHAR, $db_kondisi VARCHAR, $db_datetime VARCHAR, $db_jenisPupukID INTEGER, $db_dosisPupuk VARCHAR, $db_metode VARCHAR, $db_photo VARCHAR, $db_komen VARCHAR, $db_archive INTEGER, $db_app_ver VARCHAR)")
 
         db?.execSQL(createTablePupuk)
+        db?.execSQL(createTablePkKuning)
     }
 
     override fun onUpgrade(db: SQLiteDatabase?, oldVersion: Int, newVersion: Int) {
         db!!.execSQL("DROP TABLE IF EXISTS $db_tabPupuk")
+        db!!.execSQL("DROP TABLE IF EXISTS $db_tabPkKuning")
         onCreate(db)
     }
 
     fun deleteDb() {
         val db = this.writableDatabase
         db.delete(db_tabPupuk, null, null)
+        db.delete(db_tabPkKuning, null, null)
         db.close()
     }
 
@@ -110,5 +79,100 @@ class PemupukanSQL(context: Context) : SQLiteOpenHelper(
         val success = db.insert(db_tabPupuk, null, contentValues)
         db.close()
         return success
+    }
+
+    fun addPokokKuning(
+        idPk: Int,
+        estate: String,
+        afdeling: String,
+        blok: String,
+        kondisi: String,
+        datetime: String,
+        jenisPupukId: Int,
+        dosisPupuk: String,
+        metodePupuk: String,
+        foto: String,
+        komen: String,
+        app_ver: String
+    ): Long {
+        val db = this.writableDatabase
+        val contentValues = ContentValues()
+        contentValues.put(db_idPk, idPk)
+        contentValues.put(db_estate, estate)
+        contentValues.put(db_afdeling, afdeling)
+        contentValues.put(db_blok, blok)
+        contentValues.put(db_status, "Sudah")
+        contentValues.put(db_kondisi, kondisi)
+        contentValues.put(db_datetime, datetime)
+        contentValues.put(db_jenisPupukID, jenisPupukId)
+        contentValues.put(db_dosisPupuk, dosisPupuk)
+        contentValues.put(db_metode, metodePupuk)
+        contentValues.put(db_photo, foto)
+        contentValues.put(db_komen, komen)
+        contentValues.put(db_archive, 0)
+        contentValues.put(db_app_ver, app_ver)
+        val success = db.insert(db_tabPkKuning, null, contentValues)
+        db.close()
+        return success
+    }
+
+    @SuppressLint("Range")
+    fun viewListPkKuning(archive: Int? = 0): ArrayList<ViewPkKuning> {
+        val pkKuningList: ArrayList<ViewPkKuning> = ArrayList()
+        val selectQuery = "SELECT * FROM $db_tabPkKuning WHERE $db_archive = '$archive' ORDER BY $db_id DESC"
+        val db = this.readableDatabase
+        val cursor: Cursor?
+        try {
+            cursor = db.rawQuery(selectQuery, null)
+        } catch (e: SQLiteException) {
+            db.execSQL(selectQuery)
+            return ArrayList()
+        }
+        if (cursor.moveToFirst()) {
+            do {
+                pkKuningList.add(
+                    ViewPkKuning(
+                        cursor.getInt(cursor.getColumnIndex(db_id)),
+                        cursor.getInt(cursor.getColumnIndex(db_idPk)),
+                        cursor.getString(cursor.getColumnIndex(db_estate)),
+                        cursor.getString(cursor.getColumnIndex(db_afdeling)),
+                        cursor.getString(cursor.getColumnIndex(db_blok)),
+                        cursor.getString(cursor.getColumnIndex(db_status)),
+                        cursor.getString(cursor.getColumnIndex(db_kondisi)),
+                        cursor.getString(cursor.getColumnIndex(db_datetime)),
+                        cursor.getString(cursor.getColumnIndex(db_jenisPupukID)),
+                        cursor.getString(cursor.getColumnIndex(db_dosisPupuk)),
+                        cursor.getString(cursor.getColumnIndex(db_metode)),
+                        cursor.getString(cursor.getColumnIndex(db_photo)),
+                        cursor.getString(cursor.getColumnIndex(db_komen))
+                    )
+                )
+            } while (cursor.moveToNext())
+        }
+        return pkKuningList
+    }
+
+    @SuppressLint("Recycle")
+    fun setRecordPkKuning(): String {
+        val selectQueryPkKng = "SELECT * FROM $db_tabPkKuning WHERE $db_archive = '0'"
+        val db = this.readableDatabase
+        lateinit var cursor: Cursor
+        try {
+            cursor = db.rawQuery(selectQueryPkKng, null)
+        } catch (e: SQLiteException) {
+            Log.e("SQLiteException", "Error executing query: $selectQueryPkKng", e)
+            return "Error querying data"
+        }
+        val pkKng = try {
+            cursor.count.toString()
+        } catch (e: Exception) {
+            0
+        }
+        val total = try {
+            pkKng.toString().toInt()
+        } catch (e: Exception) {
+            0
+        }
+        return total.toString()
     }
 }

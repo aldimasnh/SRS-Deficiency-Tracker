@@ -87,6 +87,15 @@
                 android:value="" />
         </activity>
         <activity
+            android:name=".activity.PkKuningListActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/material_whitebar">
+            <meta-data
+                android:name="android.app.lib_name"
+                android:value="" />
+        </activity>
+        <activity
             android:name=".activity.WebViewActivity"
             android:exported="false"
             android:screenOrientation="landscape"

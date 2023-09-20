@@ -4,4 +4,7 @@
     <string name="userDummy">Elon Musk</string>
     <string name="update_desc">Pastikan jaringan anda stabil atau matikan jaringan untuk menggunakan mode offline</string>
     <string name="terbaru">TERBARU!</string>
+    <string name="permission_denied_explanation">Permission was denied, but is needed for core
+        functionality.</string>
+    <string name="settings">Settings</string>
 </resources>

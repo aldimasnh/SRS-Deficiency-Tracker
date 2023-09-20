@@ -2,4 +2,5 @@
 <resources>
     <item name="openCamera" type="id" />
     <item name="saveHandling" type="id" />
+    <item name="upload_data" type="id" />
 </resources>
