@@ -11,6 +11,7 @@ import android.util.Log
 import android.view.View
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.bumptech.glide.Glide
 import com.karumi.dexter.Dexter
 import com.karumi.dexter.MultiplePermissionsReport
 import com.karumi.dexter.PermissionToken
@@ -24,8 +25,12 @@ import com.srs.deficiencytracker.database.PemupukanSQL
 import com.srs.deficiencytracker.utilities.AlertDialogUtility
 import com.srs.deficiencytracker.utilities.Login
 import com.srs.deficiencytracker.utilities.PrefManager
+import com.srs.deficiencytracker.utilities.UpdateMan
 import es.dmoral.toasty.Toasty
+import kotlinx.android.synthetic.main.activity_login.logo_ssms
+import kotlinx.android.synthetic.main.activity_login.lottie
 import kotlinx.android.synthetic.main.activity_main.dashboardAndIdk
+import kotlinx.android.synthetic.main.activity_main.loadingMain
 import kotlinx.android.synthetic.main.activity_main.mapsAndPkKuning
 import kotlinx.android.synthetic.main.activity_main.profile_main
 import kotlinx.android.synthetic.main.activity_main.treeAndBlok
@@ -40,6 +45,8 @@ import kotlinx.android.synthetic.main.icon_grid.view.leftIconTap
 import kotlinx.android.synthetic.main.icon_grid.view.rightIconDescription
 import kotlinx.android.synthetic.main.icon_grid.view.rightIconSrc
 import kotlinx.android.synthetic.main.icon_grid.view.rightIconTap
+import kotlinx.android.synthetic.main.loading_file_layout.view.logoFileLoader
+import kotlinx.android.synthetic.main.loading_file_layout.view.lottieFileLoader
 import java.io.File
 
 class MainActivity : AppCompatActivity() {
@@ -56,17 +63,13 @@ class MainActivity : AppCompatActivity() {
 
         treeAndBlok.leftIconSrc.setImageResource(R.drawable.ic_palm_tree_24)
         treeAndBlok.rightIconSrc.setImageResource(R.drawable.baseline_update_24)
-        treeAndBlok.leftIconSrc.backgroundTintList =
-            ContextCompat.getColorStateList(this, R.color.grey_default)
-        treeAndBlok.rightIconSrc.backgroundTintList =
-            ContextCompat.getColorStateList(this, R.color.grey_default)
 
         dashboardAndIdk.leftIconSrc.setImageResource(R.drawable.baseline_dashboard_24)
 
         mapsAndPkKuning.leftIconDescription.text = "CEK PETA"
         mapsAndPkKuning.rightIconDescription.text = "UNGGAH DATA"
         treeAndBlok.leftIconDescription.text = "SINKRONISASI POKOK KUNING"
-        treeAndBlok.rightIconDescription.text = "SINKRONISASI PETA BLOK"
+        treeAndBlok.rightIconDescription.text = "SINKRONISASI DATA BLOK"
         dashboardAndIdk.leftIconDescription.text = "DASHBOARD"
 
         dashboardAndIdk.cv_grid2.visibility = View.GONE
@@ -80,10 +83,22 @@ class MainActivity : AppCompatActivity() {
             startActivity(intent)
         }
         treeAndBlok.leftIconTap.setOnClickListener {
-
+            if (PemupukanSQL(this).setRecordPkKuning().toInt() > 0) {
+                AlertDialogUtility.withTwoActions(
+                    this,
+                    "Batal",
+                    "Perbarui",
+                    "Ada data yang belum terupload.\nYakin ingin memperbarui?",
+                    "warning.json"
+                ) {
+                    UpdateMan().checkUpdateYellow(this, loadingMain)
+                }
+            } else {
+                UpdateMan().checkUpdateYellow(this, loadingMain)
+            }
         }
         treeAndBlok.rightIconTap.setOnClickListener {
-
+            UpdateMan().checkUpdate(this, loadingMain, PrefManager(this).dataReg!!)
         }
         dashboardAndIdk.leftIconTap.setOnClickListener {
             val intent = Intent(this, WebViewActivity::class.java)

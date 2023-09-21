@@ -1,6 +1,7 @@
 package com.srs.deficiencytracker.utilities
 
 import android.content.Context
+import android.graphics.Canvas
 import android.graphics.Point
 import android.hardware.Sensor
 import android.hardware.SensorEvent
@@ -32,7 +33,7 @@ class RotateMarker(context: Context, mapView: MapView) : Marker(mapView) {
         sensorManager.registerListener(sensorListener, orientationSensor, SensorManager.SENSOR_DELAY_NORMAL)
     }
 
-    override fun draw(canvas: android.graphics.Canvas?, mapView: MapView?, shadow: Boolean) {
+    override fun draw(canvas: Canvas?, mapView: MapView?, shadow: Boolean) {
         if (!shadow) {
             val point = Point()
             mapView?.projection?.toPixels(this.mPosition, point)
@@ -42,5 +43,9 @@ class RotateMarker(context: Context, mapView: MapView) : Marker(mapView) {
             super.draw(canvas, mapView, shadow)
             canvas?.restore()
         }
+    }
+
+    fun getRotationAngle(): Float {
+        return rotationAngle
     }
 }

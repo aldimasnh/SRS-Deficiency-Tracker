@@ -48,4 +48,11 @@
 
     </ScrollView>
 
+    <include
+        android:id="@+id/loadingMain"
+        layout="@layout/loading_file_layout"
+        android:layout_width="match_parent"
+        android:visibility="gone"
+        android:layout_height="wrap_content" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -14,6 +14,7 @@ import android.graphics.drawable.BitmapDrawable
 import android.location.Location
 import android.net.Uri
 import android.os.Bundle
+import android.os.Handler
 import android.os.Looper
 import android.preference.PreferenceManager
 import android.provider.Settings
@@ -426,7 +427,7 @@ open class MapsActivity : AppCompatActivity() {
                         cvFUMaps.visibility = if (modelList[i].statusPk == "Belum") View.VISIBLE else View.GONE
                         cvFUMaps.setOnClickListener {
                             if (firstGPS) {
-                                if (fixAccuracy > 10 && accuracyRange > 10) {
+                                if (fixAccuracy > 10 || accuracyRange > 10) {
                                     AlertDialogUtility.withTwoActions(
                                         this@MapsActivity,
                                         "BATAL",
@@ -771,14 +772,10 @@ open class MapsActivity : AppCompatActivity() {
             mapView.overlays.remove(it)
         }
 
-        val originalDrawable = ContextCompat.getDrawable(this, R.drawable.baseline_navigation_24)
-        val color = ContextCompat.getColor(this, R.color.chart_blue4)
-        originalDrawable?.let {
-            DrawableCompat.setTint(it, color)
-        }
+        val originalDrawable = ContextCompat.getDrawable(this, R.drawable.ic_current_24dp)
 
-        val widthInPixels = 100
-        val heightInPixels = 100
+        val widthInPixels = 200
+        val heightInPixels = 200
         val bitmap = Bitmap.createBitmap(widthInPixels, heightInPixels, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
         originalDrawable?.setBounds(0, 0, widthInPixels, heightInPixels)
@@ -789,6 +786,13 @@ open class MapsActivity : AppCompatActivity() {
         val newMarker = RotateMarker(this, mapView)
         newMarker.icon = resizedDrawable
         newMarker.position = GeoPoint(newLat, newLng)
+
+        var rotationAngle = 0f
+        Handler().postDelayed({
+            rotationAngle = newMarker.getRotationAngle()
+        }, 1000)
+
+        newMarker.rotation = rotationAngle
 
         mapView.overlays.add(newMarker)
         currentMarker = newMarker
@@ -840,7 +844,7 @@ open class MapsActivity : AppCompatActivity() {
     companion object {
         const val REQUEST_PERMISSIONS_REQUEST_CODE = 34
         const val REQUEST_CHECK_SETTINGS = 0x1
-        const val UPDATE_INTERVAL_IN_MILLISECONDS: Long = 5000
+        const val UPDATE_INTERVAL_IN_MILLISECONDS: Long = 10000
         const val FASTEST_UPDATE_INTERVAL_IN_MILLISECONDS =
             UPDATE_INTERVAL_IN_MILLISECONDS / 2
         const val KEY_REQUESTING_LOCATION_UPDATES = "requesting-location-updates"

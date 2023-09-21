@@ -85,13 +85,16 @@ class ChecklistEstate : AppCompatActivity() {
                             }
 
                             if (selectedCheckboxEst.isNotEmpty()) {
+                                val fixSelected = selectedCheckboxEst.toTypedArray().contentToString()
+                                    .replace("[", "").replace("]", "").replace(" ", "")
+                                prefManager.estYellow = fixSelected
+
                                 val intent = Intent(this, MainActivity::class.java)
                                 UpdateMan().loadFile(
                                     intent,
                                     urlCategory,
                                     prefManager.idReg.toString(),
-                                    selectedCheckboxEst.toTypedArray().contentToString()
-                                        .replace("[", "").replace("]", "").replace(" ", ""),
+                                    fixSelected,
                                     this@ChecklistEstate,
                                     loadingCheckEst,
                                     "download"

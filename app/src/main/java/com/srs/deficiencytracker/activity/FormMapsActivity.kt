@@ -119,6 +119,7 @@ open class FormMapsActivity : AppCompatActivity() {
             if (b) {
                 afd = ""
                 blok = ""
+                blokPlot = ""
                 sp_afd_form.text = pilihAfdeling
                 sp_blok_form.text = pilihBlok
                 llMapsEst.visibility = View.VISIBLE
@@ -130,6 +131,7 @@ open class FormMapsActivity : AppCompatActivity() {
         rb_maps2.setOnCheckedChangeListener { compoundButton, b ->
             if (b) {
                 blok = ""
+                blokPlot = ""
                 sp_blok_form.text = pilihBlok
                 llMapsEst.visibility = View.VISIBLE
                 llMapsAfd.visibility = View.VISIBLE
@@ -310,8 +312,6 @@ open class FormMapsActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 ""
             }
-            Log.d("cekData", "blok: $blok")
-            Log.d("cekData", "blokPlot: $blokPlot")
             luas = try {
                 luasArrayList[position].toFloat().toString()
             } catch (e: Exception) {
@@ -451,6 +451,9 @@ open class FormMapsActivity : AppCompatActivity() {
                         pm.afdeling = afd
                         pm.blok = blok
                         pm.blokPlot = blokPlot
+
+                        Toasty.info(this, "Mohon tunggu, sedang memproses peta..", Toasty.LENGTH_LONG).show()
+                        cvNext.visibility = View.GONE
 
                         val intent =
                             Intent(this, MapsActivity::class.java).putExtra("est", est)

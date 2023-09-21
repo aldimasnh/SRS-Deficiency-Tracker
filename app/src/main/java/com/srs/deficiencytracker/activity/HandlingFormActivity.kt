@@ -202,7 +202,7 @@ open class HandlingFormActivity : AppCompatActivity() {
 
         temuanPupuk.iv_temuan1.setOnClickListener {
             if (fotoArray.size >= 1) {
-                Toasty.warning(this, "Hanya boleh mengunggah maksimal 3 foto!").show()
+                Toasty.warning(this, "Hanya boleh mengunggah maksimal 1 foto!").show()
             } else {
                 if (photoTaken1) {
                     YoYo.with(Techniques.RotateInUpRight)
@@ -288,14 +288,27 @@ open class HandlingFormActivity : AppCompatActivity() {
                 R.id.saveHandling -> {
                     try {
                         if (posPhoto) {
-                            takeFindingPhoto()
+                            if (fname1.isNotEmpty() && temuanPupuk.et_komentar_temuan.text.toString()
+                                    .isNotEmpty()
+                            ) {
+                                takeFindingPhoto()
 
-                            posPhoto = !posPhoto
+                                posPhoto = !posPhoto
 
-                            svMainPupuk.visibility = if (!posPhoto) View.VISIBLE else View.GONE
-                            temuanPupuk.visibility = if (!posPhoto) View.GONE else View.VISIBLE
+                                svMainPupuk.visibility = if (!posPhoto) View.VISIBLE else View.GONE
+                                temuanPupuk.visibility = if (!posPhoto) View.GONE else View.VISIBLE
 
-                            updateSpeedDialItems(sdSaveUpload)
+                                updateSpeedDialItems(sdSaveUpload)
+
+                                Toasty.success(this, "Sukses menyimpan foto!").show()
+                            } else {
+                                if (fotoArray.size < 1) {
+                                    Toasty.warning(this, "Tambahkan foto temuan dan komentar!")
+                                        .show()
+                                } else {
+                                    Toasty.warning(this, "Hanya boleh mengunggah maksimal 1 foto!").show()
+                                }
+                            }
                         } else {
                             if (sp_jenis_hand.text == "Pilih Jenis Pupuk" || et_dosis_hand.text.toString()
                                     .isEmpty() || sp_metode_hand.text == "Pilih Metode" || fotoArray.isEmpty()
@@ -411,7 +424,8 @@ open class HandlingFormActivity : AppCompatActivity() {
                                                     "Pemupukan Pokok Kuning telah tersimpan!",
                                                     "success.json"
                                                 ) {
-                                                    val intent = Intent(this, MainActivity::class.java)
+                                                    val intent =
+                                                        Intent(this, MainActivity::class.java)
                                                     startActivity(intent)
                                                     finishAffinity()
                                                 }
@@ -475,35 +489,27 @@ open class HandlingFormActivity : AppCompatActivity() {
     }
 
     private fun takeFindingPhoto() {
-        if (fname1.isNotEmpty() && temuanPupuk.et_komentar_temuan.text.toString()
-                .isNotEmpty()
-        ) {
-            komArray.add(temuanPupuk.et_komentar_temuan.text.toString().replace(",", "|"))
-            fotoArray.add(fname1)
+        komArray.add(temuanPupuk.et_komentar_temuan.text.toString().replace(",", "|"))
+        fotoArray.add(fname1)
 
-            temuanPupuk.et_komentar_temuan.setText("")
-            fname1 = ""
-            photoTaken1 = false
-            file1 = null
+        temuanPupuk.et_komentar_temuan.setText("")
+        fname1 = ""
+        photoTaken1 = false
+        file1 = null
 
-            YoYo.with(Techniques.RotateOutUpRight)
-                .onEnd {
-                    zoomPupuk.fotoZoom.setImageDrawable(null)
-                    temuanPupuk.iv_temuan1.setImageResource(R.drawable.ic_baseline_add_a_photo_24)
-                    zoomPupuk.visibility = View.GONE
-                    window.statusBarColor = ContextCompat.getColor(this, R.color.white)
-                }
-                .duration(500)
-                .repeat(0)
-                .playOn(findViewById(R.id.zoomPupuk))
+        YoYo.with(Techniques.RotateOutUpRight)
+            .onEnd {
+                zoomPupuk.fotoZoom.setImageDrawable(null)
+                temuanPupuk.iv_temuan1.setImageResource(R.drawable.ic_baseline_add_a_photo_24)
+                zoomPupuk.visibility = View.GONE
+                window.statusBarColor = ContextCompat.getColor(this, R.color.white)
+            }
+            .duration(500)
+            .repeat(0)
+            .playOn(findViewById(R.id.zoomPupuk))
 
-            svMainPupuk.visibility = View.VISIBLE
-            temuanPupuk.visibility = View.GONE
-
-            Toasty.success(this, "Sukses menyimpan foto!").show()
-        } else {
-            Toasty.warning(this, "Tambahkan foto temuan dan komentar!").show()
-        }
+        svMainPupuk.visibility = View.VISIBLE
+        temuanPupuk.visibility = View.GONE
     }
 
     private fun rotateBitmapOrientation(photoFilePath: String?): Bitmap? {
@@ -959,7 +965,8 @@ open class HandlingFormActivity : AppCompatActivity() {
             ) {
                 val pm = PrefManagerEstate(this)
                 val intent = Intent(this, MapsActivity::class.java).putExtra("est", pm.estate)
-                    .putExtra("afd", pm.afdeling).putExtra("blok", pm.blok).putExtra("blokPlot", pm.blokPlot)
+                    .putExtra("afd", pm.afdeling).putExtra("blok", pm.blok)
+                    .putExtra("blokPlot", pm.blokPlot)
                 startActivity(intent)
                 finishAffinity()
             }

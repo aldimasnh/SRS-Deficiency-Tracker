@@ -154,6 +154,13 @@ class PrefManager(_context: Context) {
             editor.commit()
         }
 
+    var estYellow: String?
+        get() = pref.getString("estYellow", null)
+        set(estYellow) {
+            editor.putString("estYellow", estYellow)
+            editor.commit()
+        }
+
     var estate: String?
         get() = pref.getString(ESTATE, null)
         set(estate) {
