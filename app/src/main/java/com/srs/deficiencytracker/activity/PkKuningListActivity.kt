@@ -86,11 +86,13 @@ import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody
+import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONException
 import org.json.JSONObject
 import java.io.*
 import java.lang.Runnable
+import java.lang.String.*
 import java.nio.charset.Charset
 import java.util.*
 
@@ -606,48 +608,6 @@ class PkKuningListActivity : AppCompatActivity() {
         val queue = Volley.newRequestQueue(this)
         queue.cache.clear()
         queue.add(postRequest)
-    }
-
-    private fun rotateBitmapOrientation(photoFilePath: String?): Bitmap? {
-        // Create and configure BitmapFactory
-        val bounds = BitmapFactory.Options()
-        bounds.inJustDecodeBounds = true
-        BitmapFactory.decodeFile(photoFilePath, bounds)
-        val opts = BitmapFactory.Options()
-        val bm = BitmapFactory.decodeFile(photoFilePath, opts)
-        // Read EXIF Data
-        var exif: ExifInterface? = null
-        try {
-            exif = photoFilePath?.let { ExifInterface(it) }
-        } catch (e: IOException) {
-            e.printStackTrace()
-        }
-        val orientString: String? = exif?.getAttribute(ExifInterface.TAG_ORIENTATION)
-        val orientation =
-            orientString?.toInt() ?: ExifInterface.ORIENTATION_NORMAL
-        var rotationAngle = 0
-        when (orientation) {
-            ExifInterface.ORIENTATION_ROTATE_90 -> {
-                rotationAngle = 90
-            }
-
-            ExifInterface.ORIENTATION_ROTATE_180 -> {
-                rotationAngle = 180
-            }
-
-            ExifInterface.ORIENTATION_ROTATE_270 -> {
-                rotationAngle = 270
-            }
-        }
-        // Rotate Bitmap
-        val matrix = Matrix()
-        matrix.setRotate(
-            rotationAngle.toFloat(),
-            bm.width.toFloat() / 2,
-            bm.height.toFloat() / 2
-        )
-        // Return result
-        return Bitmap.createBitmap(bm, 0, 0, bounds.outWidth, bounds.outHeight, matrix, true)
     }
 
     private fun checkFotoArray() {
@@ -1260,30 +1220,11 @@ class PkKuningListActivity : AppCompatActivity() {
     }
 
     private fun getBytesToMBString(bytes: Long): String? {
-        return java.lang.String.format(Locale.ENGLISH, "%.2fMb", bytes / (1024.00 * 1024.00))
+        return format(Locale.ENGLISH, "%.2fMb", bytes / (1024.00 * 1024.00))
     }
 
     private fun uploadFileNew(sourceFile: File): Boolean {
         val fileName: String = sourceFile.name
-        val maxSize = 1000f
-        val takenImage = rotateBitmapOrientation(sourceFile.absolutePath)
-        val pembagiSize: Float = if (takenImage!!.width > takenImage!!.height) {
-            takenImage!!.width.toFloat() / maxSize
-        } else {
-            takenImage!!.height.toFloat() / maxSize
-        }
-        val newHeight = takenImage.height / pembagiSize
-        val newWidth = takenImage.width / pembagiSize
-        val bitmap = Bitmap.createScaledBitmap(
-            takenImage!!,
-            newWidth.toInt(),
-            newHeight.toInt(),
-            false
-        )
-        val outputStream = ByteArrayOutputStream()
-        bitmap.compress(Bitmap.CompressFormat.JPEG, 50, outputStream) // Compress the bitmap
-        val byteArray =
-            outputStream.toByteArray() // Get the compressed bitmap as a byte array
         val requestBody: RequestBody =
             MultipartBody
                 .Builder()
@@ -1291,7 +1232,7 @@ class PkKuningListActivity : AppCompatActivity() {
                 .addFormDataPart(
                     "file",
                     fileName,
-                    byteArray.toRequestBody(MultipartBody.FORM, 0, byteArray.size)
+                    sourceFile.asRequestBody()
                 )
                 .build()
         val request: Request = Request

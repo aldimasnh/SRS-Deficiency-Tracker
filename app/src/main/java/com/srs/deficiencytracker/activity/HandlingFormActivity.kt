@@ -86,6 +86,7 @@ import kotlinx.android.synthetic.main.zoom_foto_layout.view.deletePhoto
 import kotlinx.android.synthetic.main.zoom_foto_layout.view.fotoZoom
 import kotlinx.android.synthetic.main.zoom_foto_layout.view.retakePhoto
 import org.json.JSONObject
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -249,7 +250,7 @@ open class HandlingFormActivity : AppCompatActivity() {
             }
             .duration(500)
             .repeat(0)
-            .playOn(findViewById(R.id.temuanPupuk))
+            .playOn(findViewById(R.id.zoomPupuk))
     }
 
     private fun createSD(string: String, id: Int, drawable: Int, color: Int) {
@@ -794,10 +795,25 @@ open class HandlingFormActivity : AppCompatActivity() {
                             )
 
                             try {
-                                val out = FileOutputStream(file)
-                                watermarkedBitmap.compress(Bitmap.CompressFormat.JPEG, 50, out)
-                                out.flush()
-                                out.close()
+                                val targetSizeBytes = 250 * 1024
+                                var quality = 90
+
+                                val outputStream = ByteArrayOutputStream()
+                                watermarkedBitmap.compress(Bitmap.CompressFormat.JPEG, quality, outputStream)
+                                while (outputStream.size() > targetSizeBytes && quality > 0) {
+                                    quality -= 5
+                                    outputStream.reset()
+                                    watermarkedBitmap.compress(Bitmap.CompressFormat.JPEG, quality, outputStream)
+                                }
+
+                                try {
+                                    val out = FileOutputStream(file)
+                                    out.write(outputStream.toByteArray())
+                                    out.flush()
+                                    out.close()
+                                } catch (e: java.lang.Exception) {
+                                    e.printStackTrace()
+                                }
                             } catch (e: java.lang.Exception) {
                                 e.printStackTrace()
                             }
@@ -806,7 +822,7 @@ open class HandlingFormActivity : AppCompatActivity() {
                                 val outDCIM = FileOutputStream(fileDCIM)
                                 watermarkedBitmap.compress(
                                     Bitmap.CompressFormat.JPEG,
-                                    50,
+                                    100,
                                     outDCIM
                                 )
                                 outDCIM.flush()

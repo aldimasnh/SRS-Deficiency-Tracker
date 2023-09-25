@@ -56,10 +56,17 @@ class PrefManager(_context: Context) {
             editor.commit()
         }
 
-    var dataMaps: String?
-        get() = pref.getString("data_maps", "")
-        set(dataMapsCount) {
-            editor.putString("data_maps", dataMapsCount)
+    var hexMaps: String?
+        get() = pref.getString("hexMaps", "")
+        set(hexMaps) {
+            editor.putString("hexMaps", hexMaps)
+            editor.commit()
+        }
+
+    var hexPk: String?
+        get() = pref.getString("hexPk", "")
+        set(hexPk) {
+            editor.putString("hexPk", hexPk)
             editor.commit()
         }
 

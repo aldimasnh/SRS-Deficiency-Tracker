@@ -2,6 +2,7 @@ package com.srs.deficiencytracker.activity
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.content.Context
 import android.content.Intent
 import android.content.IntentSender
 import android.content.pm.PackageManager
@@ -11,10 +12,13 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.PorterDuff
 import android.graphics.drawable.BitmapDrawable
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.location.Location
 import android.net.Uri
 import android.os.Bundle
-import android.os.Handler
 import android.os.Looper
 import android.preference.PreferenceManager
 import android.provider.Settings
@@ -42,7 +46,6 @@ import com.srs.deficiencytracker.R
 import com.srs.deficiencytracker.utilities.AlertDialogUtility
 import com.srs.deficiencytracker.utilities.ModelMain
 import com.srs.deficiencytracker.utilities.PrefManager
-import com.srs.deficiencytracker.utilities.RotateMarker
 import de.mateware.snacky.Snacky
 import es.dmoral.toasty.Toasty
 import kotlinx.android.synthetic.main.activity_maps.cvFUMaps
@@ -60,7 +63,6 @@ import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.CustomZoomButtonsController
-import org.osmdroid.views.MapController
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polygon
@@ -79,8 +81,8 @@ import kotlin.math.sqrt
 
 open class MapsActivity : AppCompatActivity() {
     var modelMainList: MutableList<ModelMain> = ArrayList()
-    lateinit var mapController: MapController
     private var lastClickedMarker: Marker? = null
+    private lateinit var sensorManager: SensorManager
 
     private var getEst = ""
     private var getAfd = ""
@@ -101,6 +103,8 @@ open class MapsActivity : AppCompatActivity() {
     private var lat: Float? = null
     private var lon: Float? = null
     private var currentMarker: Marker? = null
+    private var testMarker: Marker? = null
+
     private var positionMaps = false
     private var firstGPS = false
     private var fixAccuracy = 0
@@ -254,6 +258,7 @@ open class MapsActivity : AppCompatActivity() {
         } else {
             Log.d("ET", "The JSON file maps does not exist.")
         }
+
         var avgLat = 0.0
         var avgLon = 0.0
 
@@ -272,10 +277,11 @@ open class MapsActivity : AppCompatActivity() {
         mapView.controller.animateTo(geoPoint)
         mapView.setTileSource(TileSourceFactory.DEFAULT_TILE_SOURCE)
         mapView.zoomController.setVisibility(CustomZoomButtonsController.Visibility.NEVER)
+        mapView.setBuiltInZoomControls(true)
+        mapView.controller.setZoom(15.0)
 
-        mapController = mapView.controller as MapController
-        mapController.setCenter(geoPoint)
-        mapController.zoomTo(15)
+        // Initialize sensor manager and sensors
+        sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
 
         // Create a polygon with the points
         val polygon = Polygon()
@@ -285,8 +291,24 @@ open class MapsActivity : AppCompatActivity() {
         polygon.strokeWidth = 2f
 
         mapView.overlayManager.add(polygon)
+        mapView.invalidate()
 
         getLocYellowTrees()
+    }
+
+    private val sensorListener = object : SensorEventListener {
+        override fun onSensorChanged(event: SensorEvent) {
+            if (event.sensor.type == Sensor.TYPE_ORIENTATION) {
+                val deviceOrientation = event.values[0]
+                val mapOrientation = (360 - deviceOrientation) % 360
+                mapView.mapOrientation = mapOrientation
+                mapView.invalidate()
+            }
+        }
+
+        override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
+
+        }
     }
 
     private fun getLocYellowTrees() {
@@ -494,6 +516,7 @@ open class MapsActivity : AppCompatActivity() {
 
     public override fun onResume() {
         super.onResume()
+        updateLocationUI()
         Configuration.getInstance().load(this, PreferenceManager.getDefaultSharedPreferences(this))
         if (mapView != null) {
             mapView.onResume()
@@ -503,18 +526,26 @@ open class MapsActivity : AppCompatActivity() {
         } else if (!checkPermissions()) {
             requestPermissions()
         }
-        updateLocationUI()
+        val orientationSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ORIENTATION)
+        sensorManager.registerListener(sensorListener, orientationSensor, SensorManager.SENSOR_DELAY_NORMAL)
     }
 
     public override fun onPause() {
         super.onPause()
+        stopLocationUpdates()
         Configuration.getInstance().load(this, PreferenceManager.getDefaultSharedPreferences(this))
         if (mapView != null) {
             mapView.onPause()
         }
+        sensorManager.unregisterListener(sensorListener)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
         stopLocationUpdates()
     }
 
+    @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
         AlertDialogUtility.withTwoActions(
             this,
@@ -689,12 +720,12 @@ open class MapsActivity : AppCompatActivity() {
                 lat = try {
                     String.format(Locale.ENGLISH, "%s", mCurrentLocation!!.latitude).toFloat()
                 } catch (e: Exception) {
-                    null
+                    0f
                 }
                 lon = try {
                     String.format(Locale.ENGLISH, "%s", mCurrentLocation!!.longitude).toFloat()
                 } catch (e: Exception) {
-                    null
+                    0f
                 }
 
                 updateMarkerPosition(lat!!.toDouble(), lon!!.toDouble())
@@ -771,11 +802,18 @@ open class MapsActivity : AppCompatActivity() {
         currentMarker?.let {
             mapView.overlays.remove(it)
         }
+        /*testMarker?.let {
+            mapView.overlays.remove(it)
+        }*/
 
-        val originalDrawable = ContextCompat.getDrawable(this, R.drawable.ic_current_24dp)
+        val originalDrawable = ContextCompat.getDrawable(this, R.drawable.baseline_navigation_24)
+        val color = ContextCompat.getColor(this, R.color.chart_blue4)
+        originalDrawable?.let {
+            DrawableCompat.setTint(it, color)
+        }
 
-        val widthInPixels = 200
-        val heightInPixels = 200
+        val widthInPixels = 100
+        val heightInPixels = 100
         val bitmap = Bitmap.createBitmap(widthInPixels, heightInPixels, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
         originalDrawable?.setBounds(0, 0, widthInPixels, heightInPixels)
@@ -783,19 +821,44 @@ open class MapsActivity : AppCompatActivity() {
 
         val resizedDrawable = BitmapDrawable(resources, bitmap)
 
-        val newMarker = RotateMarker(this, mapView)
+        val newMarker = Marker(mapView)
         newMarker.icon = resizedDrawable
+
+        newMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
         newMarker.position = GeoPoint(newLat, newLng)
+        newMarker.rotation = 0f
 
-        var rotationAngle = 0f
-        Handler().postDelayed({
-            rotationAngle = newMarker.getRotationAngle()
-        }, 1000)
-
-        newMarker.rotation = rotationAngle
+        newMarker.setOnMarkerClickListener(object : Marker.OnMarkerClickListener {
+            override fun onMarkerClick(marker: Marker, mapView: MapView): Boolean {
+                return true
+            }
+        })
 
         mapView.overlays.add(newMarker)
         currentMarker = newMarker
+
+        /*val testDraw = ContextCompat.getDrawable(this, R.drawable.circle)
+        val testColor = ContextCompat.getColor(this, R.color.colorRed_A400)
+        testDraw?.let {
+            DrawableCompat.setTint(it, testColor)
+        }
+
+        val testBp = Bitmap.createBitmap(5, 5, Bitmap.Config.ARGB_8888)
+        val testCan = Canvas(testBp)
+        testDraw?.setBounds(0, 0, 5, 5)
+        testDraw?.draw(testCan)
+
+        val testResized = BitmapDrawable(resources, testBp)
+
+        val testNewMarker = Marker(mapView)
+        testNewMarker.icon = testResized
+        testNewMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+        testNewMarker.position = GeoPoint(newLat, newLng)
+        testNewMarker.rotation = 0f
+        mapView.overlays.add(testNewMarker)
+
+        testMarker = testNewMarker*/
+
         mapView.invalidate()
     }
 
