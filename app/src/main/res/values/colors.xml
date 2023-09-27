@@ -7,6 +7,7 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
 
+    <color name="colorGreenList">#DCEDC8</color>
     <color name="colorMainSSMSPurple">#606EB2</color>
     <color name="border_grey">#708090</color>
     <color name="whitetrans">#73FFFFFF</color>
@@ -23,4 +24,5 @@
     <color name="low">#FFC107</color>
     <color name="colorGreen_A400">#00E676</color>
     <color name="dashboard">#FB8C00</color>
+    <color name="yellow1">#FFD73B</color>
 </resources>

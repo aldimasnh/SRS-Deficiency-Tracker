@@ -5,13 +5,9 @@ package com.srs.deficiencytracker.activity
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.ContentValues
-import android.content.Context
 import android.content.Intent
 import android.database.Cursor
 import android.database.sqlite.SQLiteException
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import android.graphics.Matrix
 import android.net.ConnectivityManager
 import android.net.NetworkInfo
 import android.os.Build
@@ -25,7 +21,6 @@ import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.exifinterface.media.ExifInterface
 import com.android.volley.Response
 import com.android.volley.toolbox.StringRequest
 import com.android.volley.toolbox.Volley
@@ -64,30 +59,28 @@ import com.srs.deficiencytracker.utilities.FileMan
 import com.srs.deficiencytracker.utilities.PrefManager
 import com.srs.deficiencytracker.utilities.UpdateMan
 import es.dmoral.toasty.Toasty
-import kotlinx.android.synthetic.main.activity_list_upload.sd_list_upload
+import kotlinx.android.synthetic.main.activity_list_upload.clLayoutUpload
 import kotlinx.android.synthetic.main.activity_list_upload.header_list_upload
 import kotlinx.android.synthetic.main.activity_list_upload.listViewUpload
-import kotlinx.android.synthetic.main.activity_list_upload.logo_ssms_upload_pk
-import kotlinx.android.synthetic.main.activity_list_upload.lt_list_upload
-import kotlinx.android.synthetic.main.activity_list_upload.pb_holder_list_upload
-import kotlinx.android.synthetic.main.activity_list_upload.progressBarUploadPk
+import kotlinx.android.synthetic.main.activity_list_upload.llHeaderListUpload
+import kotlinx.android.synthetic.main.activity_list_upload.loadingUpload
+import kotlinx.android.synthetic.main.activity_list_upload.sd_list_upload
 import kotlinx.android.synthetic.main.activity_list_upload.switchListUpload
-import kotlinx.android.synthetic.main.activity_list_upload.tvProgressUploadPk
-import kotlinx.android.synthetic.main.activity_list_upload.view.logo_ssms_upload_pk
 import kotlinx.android.synthetic.main.dialog_layout_success.view.*
 import kotlinx.android.synthetic.main.header.*
 import kotlinx.android.synthetic.main.header.view.*
+import kotlinx.android.synthetic.main.layout_list_header.view.cvDelHeader
 import kotlinx.android.synthetic.main.loading_file_layout.view.logoFileLoader
 import kotlinx.android.synthetic.main.loading_file_layout.view.lottieFileLoader
 import kotlinx.android.synthetic.main.loading_file_layout.view.progressBarFileLoader
 import kotlinx.android.synthetic.main.loading_file_layout.view.textViewFileLoader
+import kotlinx.android.synthetic.main.loading_file_layout.view.tvHintFileLoader
 import kotlinx.coroutines.*
 import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.asRequestBody
-import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONException
 import org.json.JSONObject
 import java.io.*
@@ -99,7 +92,6 @@ import java.util.*
 class PkKuningListActivity : AppCompatActivity() {
 
     //upload
-    private val urlMaps = "https://mobilepro.srs-ssms.com/config/plotMaps"
     private val urlCekFoto = "https://srs-ssms.com/deficiency_tracker/checkFotoTracker.php"
     private val urlInsert = "https://srs-ssms.com/deficiency_tracker/postDataTracker.php"
     var serverURL: String = "https://srs-ssms.com/deficiency_tracker/recordFotoTracker.php"
@@ -176,9 +168,9 @@ class PkKuningListActivity : AppCompatActivity() {
                         }, 1000)
 
                         checkUpdate()
-                        checkUpdatePokok()
+                        UpdateMan().checkUpdateYellow(null, this@PkKuningListActivity, loadingUpload)
                     } else {
-                        pb_holder_list_upload.visibility = View.GONE
+                        clLayoutUpload.visibility = View.GONE
                     }
 
                 }
@@ -210,9 +202,9 @@ class PkKuningListActivity : AppCompatActivity() {
                     }, 1000)
 
                     checkUpdate()
-                    checkUpdatePokok()
+                    UpdateMan().checkUpdateYellow(null, this, loadingUpload)
                 } else {
-                    pb_holder_list_upload.visibility = View.GONE
+                    clLayoutUpload.visibility = View.GONE
                 }
             }
         }
@@ -237,6 +229,7 @@ class PkKuningListActivity : AppCompatActivity() {
 
     var getArchive = ""
 
+    @SuppressLint("SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_list_upload)
@@ -251,9 +244,12 @@ class PkKuningListActivity : AppCompatActivity() {
             "0"
         }
 
+        loadingUpload.tvHintFileLoader.text = "Mohon ditunggu, sedang memproses"
         val archiveNotEmpty = getArchive.isNotEmpty()
         if (archiveNotEmpty || PemupukanSQL(this).setRecordPkKuning().toInt() > 0) {
             switchListUpload.isChecked = archiveNotEmpty && getArchive.toInt() == 1
+            llHeaderListUpload.cvDelHeader.visibility =
+                if (archiveNotEmpty && getArchive.toInt() == 1) View.GONE else View.VISIBLE
             sd_list_upload.visibility =
                 if (archiveNotEmpty && getArchive.toInt() == 1) View.GONE else View.VISIBLE
             makeList(if (archiveNotEmpty) getArchive.toInt() else 0)
@@ -262,9 +258,11 @@ class PkKuningListActivity : AppCompatActivity() {
 
         switchListUpload.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) {
+                llHeaderListUpload.cvDelHeader.visibility = View.GONE
                 sd_list_upload.visibility = View.GONE
                 makeList(1)
             } else {
+                llHeaderListUpload.cvDelHeader.visibility = View.VISIBLE
                 sd_list_upload.visibility = View.VISIBLE
                 makeList(0)
             }
@@ -272,14 +270,14 @@ class PkKuningListActivity : AppCompatActivity() {
 
         Glide.with(this)//GLIDE LOGO FOR LOADING LAYOUT
             .load(R.drawable.logo_png_white)
-            .into(logo_ssms_upload_pk)
+            .into(loadingUpload.logoFileLoader)
         Glide.with(this)//GLIDE LOGO FOR LOADING LAYOUT
             .load(R.drawable.ssms_green)
-            .into(pb_holder_list_upload.logo_ssms_upload_pk)
-        lt_list_upload.setAnimation("loading_circle.json")//ANIMATION WITH LOTTIE FOR LOADING LAYOUT
+            .into(loadingUpload.logoFileLoader)
+        loadingUpload.lottieFileLoader.setAnimation("loading_circle.json")//ANIMATION WITH LOTTIE FOR LOADING LAYOUT
         @Suppress("DEPRECATION")
-        lt_list_upload.loop(true)
-        lt_list_upload.playAnimation()
+        loadingUpload.lottieFileLoader.loop(true)
+        loadingUpload.lottieFileLoader.playAnimation()
     }
 
     private fun utils() {
@@ -302,10 +300,9 @@ class PkKuningListActivity : AppCompatActivity() {
         val kondisi = ArrayList<String>()
         val datetime = ArrayList<String>()
 
-        var idX = 0
         for (e in arrayList) {
-            if (!idPk.contains(e.db_idPk)) {
-                id.add(idX)
+            if (!id.contains(e.db_id)) {
+                id.add(e.db_id)
                 idPk.add(e.db_idPk)
                 est.add(e.db_estate)
                 afd.add(e.db_afdeling)
@@ -313,7 +310,6 @@ class PkKuningListActivity : AppCompatActivity() {
                 status.add(e.db_status)
                 kondisi.add(e.db_kondisi)
                 datetime.add(e.db_datetime)
-                idX++
             }
         }
 
@@ -336,7 +332,7 @@ class PkKuningListActivity : AppCompatActivity() {
                 R.id.upload_data -> {
                     val connected: Boolean
                     val connectivityManager: ConnectivityManager =
-                        this.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+                        this.getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
                     connected =
                         connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_MOBILE)!!.state === NetworkInfo.State.CONNECTED ||
                                 connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI)!!.state === NetworkInfo.State.CONNECTED
@@ -489,7 +485,7 @@ class PkKuningListActivity : AppCompatActivity() {
                 },
                 {
                     uploading = true
-                    pb_holder_list_upload.visibility = View.VISIBLE
+                    clLayoutUpload.visibility = View.VISIBLE
                     arrayCheckFoto.removeAll(arrayMissPhoto)
 
                     handler.postDelayed(runnableCode, delay.toLong())
@@ -498,7 +494,7 @@ class PkKuningListActivity : AppCompatActivity() {
             )
         } else {
             uploading = true
-            pb_holder_list_upload.visibility = View.VISIBLE
+            clLayoutUpload.visibility = View.VISIBLE
             handler.postDelayed(runnableCode, delay.toLong())
             handler.postDelayed(stopRunnable, timeOut.toLong())
         }
@@ -695,281 +691,11 @@ class PkKuningListActivity : AppCompatActivity() {
         queue.add(postRequest)
     }
 
-    private fun checkUpdatePokok() {
-        val prefManager = PrefManager(this)
-        val urlCatMaps = "maps${prefManager.dataReg}"
-        val urlCatPk = "pk${prefManager.dataReg}"
-
-        val filePath = this.getExternalFilesDir(null)?.absolutePath + "/MAIN/"
-
-        val mapsPath = File(filePath + urlCatMaps)
-        if (mapsPath.exists()) {
-            mapsPath.delete()
-        }
-
-        val pkPath = File(filePath + urlCatPk)
-        if (pkPath.exists()) {
-            pkPath.delete()
-        }
-
-        val strReq: StringRequest =
-            @SuppressLint("SetTextI18n")
-            object : StringRequest(
-                Method.POST,
-                "$urlMaps/getDataPlot.php",
-                Response.Listener { response ->
-                    try {
-                        val jObj = JSONObject(response)
-                        val success = jObj.getInt("success")
-
-                        if (success == 1) {
-                            Log.d("logMaps", jObj.getString(Database.TAG_MESSAGE))
-
-                            val configMaps = PRDownloaderConfig.newBuilder()
-                                .setReadTimeout(30000)
-                                .setConnectTimeout(30000)
-                                .build()
-                            PRDownloader.initialize(this.applicationContext, configMaps)
-                            val zipFileMaps = "$urlCatMaps.zip"
-                            val urlm = "$urlMaps/${urlCatMaps.substringBefore(".")}.zip"
-                            Log.d("testzip", "zipFileMaps: $zipFileMaps || url: $urlm")
-                            @Suppress("UNUSED_VARIABLE") val downloadId =
-                                PRDownloader.download(urlm, filePath, zipFileMaps)
-                                    .build()
-                                    .setOnStartOrResumeListener { }
-                                    .setOnPauseListener { }
-                                    .setOnCancelListener { }
-                                    .setOnProgressListener { progress ->
-                                        val progressPercent: Long =
-                                            progress.currentBytes * 100 / progress.totalBytes
-                                        Log.d("cek", "1")
-                                        progressBarUploadPk.progress =
-                                            progressPercent.toInt()
-                                        Log.d("cek", "2")
-                                        tvProgressUploadPk.text =
-                                            "${getBytesToMBString(progress.currentBytes)} / ${
-                                                getBytesToMBString(progress.totalBytes)
-                                            }"
-                                        Log.d("cek", "3")
-                                       progressBarUploadPk.isIndeterminate = false
-                                        Log.d("cek", "4")
-                                    }
-                                    .start(object : OnDownloadListener {
-                                        @RequiresApi(Build.VERSION_CODES.O)
-                                        override fun onDownloadComplete() {
-                                            try {
-                                                FileMan().unzip(filePath + zipFileMaps, filePath)
-                                                Log.d("cek", "5")
-                                            } finally {
-                                                File(filePath + zipFileMaps).delete()
-                                                Log.d("cek", "6")
-
-                                                Log.d("logMaps", "namefile: ${urlCatMaps.substringBefore(".")}.zip")
-                                                val deleteRequest = StringRequest(
-                                                    Method.GET,
-                                                    "$urlMaps/deleteZipMaps.php?name=${urlCatMaps.substringBefore(".")}.zip",
-                                                    { response ->
-                                                        try {
-                                                            val jObj = JSONObject(response)
-                                                            val success = jObj.getInt("success")
-
-                                                            if (success == 1) {
-                                                                Log.d(
-                                                                    "logMaps",
-                                                                    jObj.getString(Database.TAG_MESSAGE)
-                                                                )
-                                                            } else {
-                                                                Log.d(
-                                                                    "logMaps",
-                                                                    jObj.getString(Database.TAG_MESSAGE)
-                                                                )
-                                                            }
-                                                        } catch (e: JSONException) {
-                                                            Log.d("logMaps", "Error: $e")
-                                                            e.printStackTrace()
-                                                        }
-                                                    },
-                                                    { error ->
-                                                        Log.d("logMaps", "Terjadi kesalahan koneksi: delete file")
-                                                    })
-                                                Volley.newRequestQueue(this@PkKuningListActivity)
-                                                    .add(deleteRequest)
-
-                                                val strReq: StringRequest =
-                                                    object : StringRequest(
-                                                        Method.POST,
-                                                        "$urlMaps/getPlotPkKuning.php",
-                                                        Response.Listener { response ->
-                                                            try {
-                                                                val jObj = JSONObject(response)
-                                                                val success = jObj.getInt("success")
-
-                                                                if (success == 1) {
-                                                                    Log.d("logMaps", jObj.getString(
-                                                                        Database.TAG_MESSAGE))
-
-                                                                    val configPk = PRDownloaderConfig.newBuilder()
-                                                                        .setReadTimeout(30000)
-                                                                        .setConnectTimeout(30000)
-                                                                        .build()
-                                                                    PRDownloader.initialize(this@PkKuningListActivity.applicationContext, configPk)
-                                                                    val zipFilePk = "$urlCatPk.zip"
-                                                                    val urlpk = "$urlMaps/${urlCatPk.substringBefore(".")}.zip"
-                                                                    Log.d("testzip", "zipFilePk: $zipFilePk || url: $urlpk")
-                                                                    @Suppress("UNUSED_VARIABLE") val downloadId =
-                                                                        PRDownloader.download(urlpk, filePath, zipFilePk)
-                                                                            .build()
-                                                                            .setOnStartOrResumeListener { }
-                                                                            .setOnPauseListener { }
-                                                                            .setOnCancelListener { }
-                                                                            .setOnProgressListener { progress ->
-                                                                                val progressPercent: Long =
-                                                                                    progress.currentBytes * 100 / progress.totalBytes
-                                                                                Log.d("cek", "1")
-                                                                               progressBarUploadPk.progress =
-                                                                                    progressPercent.toInt()
-                                                                                Log.d("cek", "2")
-                                                                                tvProgressUploadPk.text =
-                                                                                    "${getBytesToMBString(progress.currentBytes)} / ${
-                                                                                        getBytesToMBString(progress.totalBytes)
-                                                                                    }"
-                                                                                Log.d("cek", "3")
-                                                                               progressBarUploadPk.isIndeterminate = false
-                                                                                Log.d("cek", "4")
-                                                                            }
-                                                                            .start(object :
-                                                                                OnDownloadListener {
-                                                                                @RequiresApi(Build.VERSION_CODES.O)
-                                                                                override fun onDownloadComplete() {
-                                                                                    try {
-                                                                                        FileMan().unzip(filePath + zipFilePk, filePath)
-                                                                                        Log.d("cek", "5")
-                                                                                    } finally {
-                                                                                        File(filePath + zipFilePk).delete()
-                                                                                        Log.d("cek", "6")
-
-                                                                                        Log.d("logMaps", "namefile: ${urlCatPk.substringBefore(".")}.zip")
-                                                                                        val deleteRequest = StringRequest(
-                                                                                            Method.GET,
-                                                                                            "$urlMaps/deleteZipMaps.php?name=${urlCatPk.substringBefore(".")}.zip",
-                                                                                            { response ->
-                                                                                                try {
-                                                                                                    val jObj = JSONObject(response)
-                                                                                                    val success = jObj.getInt("success")
-
-                                                                                                    if (success == 1) {
-                                                                                                        Log.d(
-                                                                                                            "logMaps",
-                                                                                                            jObj.getString(
-                                                                                                                Database.TAG_MESSAGE)
-                                                                                                        )
-                                                                                                    } else {
-                                                                                                        Log.d(
-                                                                                                            "logMaps",
-                                                                                                            jObj.getString(
-                                                                                                                Database.TAG_MESSAGE)
-                                                                                                        )
-                                                                                                    }
-                                                                                                    Toasty.success(this@PkKuningListActivity, "Data Pokok Kuning berhasil diupdate", Toast.LENGTH_SHORT)
-                                                                                                        .show()
-                                                                                                } catch (e: JSONException) {
-                                                                                                    Toasty.warning(this@PkKuningListActivity, "Error update pokok kuning: $e", Toast.LENGTH_SHORT)
-                                                                                                        .show()
-                                                                                                    Log.d("logMaps", "Error: $e")
-                                                                                                    e.printStackTrace()
-                                                                                                }
-                                                                                                pb_holder_list_upload.visibility = View.GONE
-                                                                                            },
-                                                                                            { error ->
-                                                                                                pb_holder_list_upload.visibility = View.GONE
-                                                                                                Log.d("logMaps", "Terjadi kesalahan koneksi: delete file pokok kuning")
-                                                                                            })
-                                                                                        Volley.newRequestQueue(this@PkKuningListActivity)
-                                                                                            .add(deleteRequest)
-                                                                                        Log.d("cek", "7")
-                                                                                    }
-                                                                                }
-
-                                                                                override fun onError(error: Error?) {
-                                                                                    pb_holder_list_upload.visibility = View.GONE
-                                                                                    Toasty.warning(this@PkKuningListActivity, "Error download pokok kuning: $error", Toast.LENGTH_SHORT)
-                                                                                        .show()
-                                                                                    Log.d("logMaps", "Error: $error")
-                                                                                }
-                                                                            })
-                                                                } else {
-                                                                    pb_holder_list_upload.visibility = View.GONE
-                                                                    Toasty.warning(this@PkKuningListActivity, jObj.getString(Database.TAG_MESSAGE), Toast.LENGTH_SHORT)
-                                                                        .show()
-                                                                    Log.d("logMaps", jObj.getString(Database.TAG_MESSAGE))
-                                                                }
-                                                            } catch (e: JSONException) {
-                                                                pb_holder_list_upload.visibility = View.GONE
-                                                                Toasty.warning(this@PkKuningListActivity, "Data error, hubungi pengembang: $e", Toast.LENGTH_SHORT)
-                                                                    .show()
-                                                                Log.d("logMaps", "Data error, hubungi pengembang: $e")
-                                                                e.printStackTrace()
-                                                            }
-                                                        },
-                                                        Response.ErrorListener { error ->
-                                                            pb_holder_list_upload.visibility = View.GONE
-                                                            Toasty.warning(this@PkKuningListActivity, "Terjadi kesalahan koneksi update data, e: $error", Toast.LENGTH_SHORT)
-                                                                .show()
-                                                            Log.d("logMaps", "Terjadi kesalahan koneksi update data, e: $error")
-                                                        }) {
-                                                        override fun getParams(): Map<String, String> {
-                                                            val params: MutableMap<String, String> =
-                                                                HashMap()
-                                                            params["dataReg"] = prefManager.dataReg!!
-                                                            params["est"] = prefManager.estYellow!!
-                                                            return params
-                                                        }
-                                                    }
-                                                Volley.newRequestQueue(this@PkKuningListActivity).add(strReq)
-                                            }
-                                        }
-
-                                        override fun onError(error: Error?) {
-                                            pb_holder_list_upload.visibility = View.GONE
-                                            Toasty.warning(this@PkKuningListActivity, "Terjadi kesalahan koneksi update data, e: $error", Toast.LENGTH_SHORT)
-                                                .show()
-                                            Log.d("logMaps", "Error: $error")
-                                        }
-                                    })
-                        } else {
-                            pb_holder_list_upload.visibility = View.GONE
-                            Toasty.warning(this@PkKuningListActivity, jObj.getString(Database.TAG_MESSAGE), Toast.LENGTH_SHORT)
-                                .show()
-                            Log.d("logMaps", jObj.getString(Database.TAG_MESSAGE))
-                        }
-                    } catch (e: JSONException) {
-                        pb_holder_list_upload.visibility = View.GONE
-                        Toasty.warning(this@PkKuningListActivity, "Data error, hubungi pengembang: $e", Toast.LENGTH_SHORT)
-                            .show()
-                        Log.d("logMaps", "Data error, hubungi pengembang: $e")
-                        e.printStackTrace()
-                    }
-                },
-                Response.ErrorListener { error ->
-                    pb_holder_list_upload.visibility = View.GONE
-                    Toasty.warning(this@PkKuningListActivity, "Terjadi kesalahan koneksi: $error", Toast.LENGTH_SHORT)
-                        .show()
-                    Log.d("logMaps", "Terjadi kesalahan koneksi: $error")
-                }) {
-                override fun getParams(): Map<String, String> {
-                    val params: MutableMap<String, String> = HashMap()
-                    params["reg"] = prefManager.idReg.toString()
-                    return params
-                }
-            }
-        Volley.newRequestQueue(this).add(strReq)
-    }
-
     private fun checkUpdate() {
         val filePath = this.getExternalFilesDir(null)?.absolutePath + "/CACHE/"
         val connected: Boolean
         val connectivityManager: ConnectivityManager =
-            this.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+            this.getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
         connected =
             connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_MOBILE)!!.state === NetworkInfo.State.CONNECTED ||
                     connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI)!!.state === NetworkInfo.State.CONNECTED
@@ -1051,7 +777,7 @@ class PkKuningListActivity : AppCompatActivity() {
                                 alertDialog.dismiss()
                             }
                             layoutBuilder.btn_action.setOnClickListener {
-                                pb_holder_list_upload.visibility = View.VISIBLE
+                                clLayoutUpload.visibility = View.VISIBLE
                                 alertDialog.dismiss()
                                 val fDelete =
                                     File(getExternalFilesDir(null)?.absolutePath + "/MAIN/" + urlCategory)
@@ -1062,7 +788,7 @@ class PkKuningListActivity : AppCompatActivity() {
                                     getExternalFilesDir(null)?.absolutePath + "/MAIN/"
                                 val f = File(filePath + urlCategory)
                                 if ((!f.exists())) {
-                                    pb_holder_list_upload.visibility = View.VISIBLE
+                                    clLayoutUpload.visibility = View.VISIBLE
                                     val config = PRDownloaderConfig.newBuilder()
                                         .setReadTimeout(30000)
                                         .setConnectTimeout(30000)
@@ -1085,16 +811,16 @@ class PkKuningListActivity : AppCompatActivity() {
                                                 val progressPercent: Long =
                                                     progress.currentBytes * 100 / progress.totalBytes
 
-                                                progressBarUploadPk.visibility = View.VISIBLE
-                                                progressBarUploadPk.progress =
+                                                loadingUpload.progressBarFileLoader.visibility = View.VISIBLE
+                                                loadingUpload.progressBarFileLoader.progress =
                                                     progressPercent.toInt()
 
-                                                tvProgressUploadPk.text =
+                                                loadingUpload.textViewFileLoader.text =
                                                     "${getBytesToMBString(progress.currentBytes)} / ${
                                                         getBytesToMBString(progress.totalBytes)
                                                     }"
 
-                                                progressBarUploadPk.isIndeterminate = false
+                                                loadingUpload.progressBarFileLoader.isIndeterminate = false
 
                                             }
                                             .start(object : OnDownloadListener {
@@ -1108,13 +834,13 @@ class PkKuningListActivity : AppCompatActivity() {
 
                                                     } finally {
                                                         File(filePath + zipFile).delete()
-                                                        pb_holder_list_upload.visibility = View.GONE
+                                                        clLayoutUpload.visibility = View.GONE
                                                     }
                                                 }
 
                                                 override fun onError(error: Error?) {
                                                     Log.d("testzip", error.toString())
-                                                    pb_holder_list_upload.visibility = View.GONE
+                                                    clLayoutUpload.visibility = View.GONE
                                                 }
                                             })
                                 } else if (f.exists()) {

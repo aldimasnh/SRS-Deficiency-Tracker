@@ -186,6 +186,8 @@ open class MapsActivity : AppCompatActivity() {
         }
 
         val latlnValues = ArrayList<IGeoPoint>()
+        val coordinates = mutableListOf<List<GeoPoint>>()
+        var currentCoordinateList = mutableListOf<GeoPoint>()
         val mapsPath = this.getExternalFilesDir(null)?.absolutePath + "/MAIN/maps" + urlCategory
         val fileMaps = File(mapsPath)
         if (fileMaps.exists()) {
@@ -201,17 +203,27 @@ open class MapsActivity : AppCompatActivity() {
                         for (index in indicesAfd) {
                             val blokObjMaps = afdObjMaps.getJSONObject(index)
                             val splLatLn = blokObjMaps.getString("latln").split("$").toTypedArray()
-                            for (j in splLatLn.indices) {
-                                if (splLatLn[j].isNotEmpty()) {
-                                    val fixLatLn =
-                                        splLatLn[j].replace(" ", "").split(",").toTypedArray()
-                                    latlnValues.add(
-                                        GeoPoint(
-                                            fixLatLn[0].trim().toDouble(),
-                                            fixLatLn[1].trim().toDouble()
-                                        )
-                                    )
+                            for (item in splLatLn) {
+                                if (item.isBlank()) {
+                                    if (currentCoordinateList.isNotEmpty()) {
+                                        coordinates.add(currentCoordinateList.toList())
+                                        currentCoordinateList.clear()
+                                    }
+                                } else {
+                                    val parts = item.split(", ")
+                                    if (parts.size == 2) {
+                                        val latitude = parts[0].toDouble()
+                                        val longitude = parts[1].toDouble()
+                                        val geoPoint = GeoPoint(latitude, longitude)
+
+                                        latlnValues.add(geoPoint) // To get all latlon and be get a average of lat lon to centered maps
+                                        currentCoordinateList.add(geoPoint)
+                                    }
                                 }
+                            }
+
+                            if (currentCoordinateList.isNotEmpty()) {
+                                coordinates.add(currentCoordinateList.toList())
                             }
                         }
                     }
@@ -221,33 +233,53 @@ open class MapsActivity : AppCompatActivity() {
                         for (index in indicesAfd) {
                             val blokObjMaps = estObjMaps.getJSONObject(getAfd).getJSONObject(index)
                             val splLatLn = blokObjMaps.getString("latln").split("$").toTypedArray()
-                            for (j in splLatLn.indices) {
-                                if (splLatLn[j].isNotEmpty()) {
-                                    val fixLatLn =
-                                        splLatLn[j].replace(" ", "").split(",").toTypedArray()
-                                    latlnValues.add(
-                                        GeoPoint(
-                                            fixLatLn[0].trim().toDouble(),
-                                            fixLatLn[1].trim().toDouble()
-                                        )
-                                    )
+                            for (item in splLatLn) {
+                                if (item.isBlank()) {
+                                    if (currentCoordinateList.isNotEmpty()) {
+                                        coordinates.add(currentCoordinateList.toList())
+                                        currentCoordinateList.clear()
+                                    }
+                                } else {
+                                    val parts = item.split(", ")
+                                    if (parts.size == 2) {
+                                        val latitude = parts[0].toDouble()
+                                        val longitude = parts[1].toDouble()
+                                        val geoPoint = GeoPoint(latitude, longitude)
+
+                                        latlnValues.add(geoPoint) // To get all latlon and be get a average of lat lon to centered maps
+                                        currentCoordinateList.add(geoPoint)
+                                    }
                                 }
+                            }
+
+                            if (currentCoordinateList.isNotEmpty()) {
+                                coordinates.add(currentCoordinateList.toList())
                             }
                         }
                     } else {
                         val blokObjMaps = estObjMaps.getJSONObject(getAfd).getJSONObject(fixBlok)
                         val splLatLn = blokObjMaps.getString("latln").split("$").toTypedArray()
-                        for (j in splLatLn.indices) {
-                            if (splLatLn[j].isNotEmpty()) {
-                                val fixLatLn =
-                                    splLatLn[j].replace(" ", "").split(",").toTypedArray()
-                                latlnValues.add(
-                                    GeoPoint(
-                                        fixLatLn[0].trim().toDouble(),
-                                        fixLatLn[1].trim().toDouble()
-                                    )
-                                )
+                        for (item in splLatLn) {
+                            if (item.isBlank()) {
+                                if (currentCoordinateList.isNotEmpty()) {
+                                    coordinates.add(currentCoordinateList.toList())
+                                    currentCoordinateList.clear()
+                                }
+                            } else {
+                                val parts = item.split(", ")
+                                if (parts.size == 2) {
+                                    val latitude = parts[0].toDouble()
+                                    val longitude = parts[1].toDouble()
+                                    val geoPoint = GeoPoint(latitude, longitude)
+
+                                    latlnValues.add(geoPoint) // To get all latlon and be get a average of lat lon to centered maps
+                                    currentCoordinateList.add(geoPoint)
+                                }
                             }
+                        }
+
+                        if (currentCoordinateList.isNotEmpty()) {
+                            coordinates.add(currentCoordinateList.toList())
                         }
                     }
                 }
@@ -283,14 +315,14 @@ open class MapsActivity : AppCompatActivity() {
         // Initialize sensor manager and sensors
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
 
-        // Create a polygon with the points
-        val polygon = Polygon()
-        polygon.points = latlnValues as MutableList<GeoPoint>
-        polygon.fillPaint.color = 0x1523CB1F // Fill color (semi-transparent green)
-        polygon.strokeColor = 0xFF000000.toInt() // Stroke color (black)
-        polygon.strokeWidth = 2f
-
-        mapView.overlayManager.add(polygon)
+        for (coordinateList in coordinates) {
+            val polygon = Polygon()
+            polygon.points = coordinateList
+            polygon.fillPaint.color = 0x1523CB1F // Fill color (semi-transparent green)
+            polygon.strokeColor = 0xFF000000.toInt() // Stroke color (black)
+            polygon.strokeWidth = 2f
+            mapView.overlays.add(polygon)
+        }
         mapView.invalidate()
 
         getLocYellowTrees()
@@ -399,19 +431,38 @@ open class MapsActivity : AppCompatActivity() {
         }
     }
 
-    @SuppressLint("SetTextI18n")
+    @SuppressLint("SetTextI18n", "ResourceType")
     private fun initMarker(modelList: List<ModelMain>) {
         runOnUiThread {
             for (i in modelList.indices) {
-                val drawable = ContextCompat.getDrawable(
+                var drawable = ContextCompat.getDrawable(
                     this,
                     if (modelList[i].statusPk == "Sudah") R.drawable.baseline_circle_24 else R.drawable.ic_close
                 )
                 val color = ContextCompat.getColor(
                     this,
-                    if (modelList[i].statusPk == "Sudah") R.color.chart_blue4 else R.color.chart_red4
+                    if (modelList[i].statusPk == "Sudah") {
+                        R.color.chart_blue4
+                    } else if (modelList[i].kondisiPk == "Pucat") {
+                        R.color.yellow1
+                    } else if (modelList[i].kondisiPk == "Ringan") {
+                        R.color.dashboard
+                    } else {
+                        R.color.colorRed_A400
+                    }
                 )
                 drawable?.setColorFilter(color, PorterDuff.Mode.SRC_ATOP)
+
+                // Resize icon status sudah ditangani
+                if (modelList[i].statusPk == "Sudah") {
+                    val widthInPixels = 50
+                    val heightInPixels = 50
+                    val bitmap = Bitmap.createBitmap(widthInPixels, heightInPixels, Bitmap.Config.ARGB_8888)
+                    val canvas = Canvas(bitmap)
+                    drawable?.setBounds(0, 0, widthInPixels, heightInPixels)
+                    drawable?.draw(canvas)
+                    drawable = BitmapDrawable(resources, bitmap)
+                }
 
                 val marker = Marker(mapView)
                 marker.icon = drawable
@@ -449,7 +500,7 @@ open class MapsActivity : AppCompatActivity() {
                         cvFUMaps.visibility = if (modelList[i].statusPk == "Belum") View.VISIBLE else View.GONE
                         cvFUMaps.setOnClickListener {
                             if (firstGPS) {
-                                if (fixAccuracy > 10 || accuracyRange > 10) {
+                                if (fixAccuracy > 10 || accuracyRange > 21) {
                                     AlertDialogUtility.withTwoActions(
                                         this@MapsActivity,
                                         "BATAL",
@@ -554,6 +605,7 @@ open class MapsActivity : AppCompatActivity() {
             "Apakah anda yakin untuk keluar?",
             "warning.json"
         ) {
+            stopLocationUpdates()
             val intent = Intent(this, MainActivity::class.java)
             startActivity(intent)
             finishAffinity()
@@ -802,12 +854,9 @@ open class MapsActivity : AppCompatActivity() {
         currentMarker?.let {
             mapView.overlays.remove(it)
         }
-        /*testMarker?.let {
-            mapView.overlays.remove(it)
-        }*/
 
-        val originalDrawable = ContextCompat.getDrawable(this, R.drawable.baseline_navigation_24)
-        val color = ContextCompat.getColor(this, R.color.chart_blue4)
+        var originalDrawable = ContextCompat.getDrawable(this, R.drawable.baseline_navigation_24)
+        val color = ContextCompat.getColor(this, R.color.colorPrimaryDark)
         originalDrawable?.let {
             DrawableCompat.setTint(it, color)
         }
@@ -818,12 +867,10 @@ open class MapsActivity : AppCompatActivity() {
         val canvas = Canvas(bitmap)
         originalDrawable?.setBounds(0, 0, widthInPixels, heightInPixels)
         originalDrawable?.draw(canvas)
-
-        val resizedDrawable = BitmapDrawable(resources, bitmap)
+        originalDrawable = BitmapDrawable(resources, bitmap)
 
         val newMarker = Marker(mapView)
-        newMarker.icon = resizedDrawable
-
+        newMarker.icon = originalDrawable
         newMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
         newMarker.position = GeoPoint(newLat, newLng)
         newMarker.rotation = 0f
@@ -837,28 +884,6 @@ open class MapsActivity : AppCompatActivity() {
         mapView.overlays.add(newMarker)
         currentMarker = newMarker
 
-        /*val testDraw = ContextCompat.getDrawable(this, R.drawable.circle)
-        val testColor = ContextCompat.getColor(this, R.color.colorRed_A400)
-        testDraw?.let {
-            DrawableCompat.setTint(it, testColor)
-        }
-
-        val testBp = Bitmap.createBitmap(5, 5, Bitmap.Config.ARGB_8888)
-        val testCan = Canvas(testBp)
-        testDraw?.setBounds(0, 0, 5, 5)
-        testDraw?.draw(testCan)
-
-        val testResized = BitmapDrawable(resources, testBp)
-
-        val testNewMarker = Marker(mapView)
-        testNewMarker.icon = testResized
-        testNewMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
-        testNewMarker.position = GeoPoint(newLat, newLng)
-        testNewMarker.rotation = 0f
-        mapView.overlays.add(testNewMarker)
-
-        testMarker = testNewMarker*/
-
         mapView.invalidate()
     }
 
@@ -868,7 +893,7 @@ open class MapsActivity : AppCompatActivity() {
                 GeoPoint(lat!!.toDouble(), lon!!.toDouble()))
             accuracyRange = rangeM
             tvJarakMaps.text = rangeKm
-            if (accuracyRange > 10) {
+            if (accuracyRange > 21) {
                 tvJarakMaps.setTextColor(Color.RED)
             } else {
                 tvJarakMaps.setTextColor(
@@ -896,9 +921,9 @@ open class MapsActivity : AppCompatActivity() {
         val distanceInMeters = distanceInKilometers * 1000
 
         val formattedDistanceKilometers = if (distanceInKilometers >= 1.0) {
-            "${String.format("%.1f", distanceInKilometers)} km"
+            "${String.format("%.1f", distanceInKilometers)}km"
         } else {
-            "${String.format("%.0f", distanceInKilometers * 1000)} m"
+            "${String.format("%.0f", distanceInKilometers * 1000)}m"
         }
 
         return formattedDistanceKilometers to distanceInMeters.toInt()

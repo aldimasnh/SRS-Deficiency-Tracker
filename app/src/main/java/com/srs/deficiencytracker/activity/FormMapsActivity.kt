@@ -479,6 +479,7 @@ open class FormMapsActivity : AppCompatActivity() {
             "Apakah anda yakin untuk keluar?",
             "warning.json"
         ) {
+            stopLocationUpdates()
             val intent = Intent(this, MainActivity::class.java)
             startActivity(intent)
             finishAffinity()
@@ -497,6 +498,11 @@ open class FormMapsActivity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
+        stopLocationUpdates()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
         stopLocationUpdates()
     }
 

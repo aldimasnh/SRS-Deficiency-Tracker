@@ -15,7 +15,6 @@ import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AlertDialog
 import androidx.constraintlayout.widget.ConstraintLayout
-import com.android.volley.Request
 import com.android.volley.Response
 import com.android.volley.toolbox.StringRequest
 import com.android.volley.toolbox.Volley
@@ -29,7 +28,6 @@ import com.srs.deficiencytracker.R
 import com.srs.deficiencytracker.database.PemupukanSQL
 import com.srs.deficiencytracker.database.PupukList
 import es.dmoral.toasty.Toasty
-import kotlinx.android.synthetic.main.activity_main.loadingMain
 import kotlinx.android.synthetic.main.dialog_layout_success.view.btn_action
 import kotlinx.android.synthetic.main.dialog_layout_success.view.btn_dismiss
 import kotlinx.android.synthetic.main.dialog_layout_success.view.lottie_anim
@@ -48,6 +46,7 @@ import java.io.FileInputStream
 import java.io.IOException
 import java.io.InputStream
 import java.nio.charset.Charset
+import java.security.MessageDigest
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -71,12 +70,13 @@ class UpdateMan {
     fun loadFile(
         intentTo: Intent,
         urlCat: String,
-        idReg: String,
         strEst: String,
         context: Context,
         loaderView: View,
         activity: String? = null
     ) {
+        val prefManager = PrefManager(context)
+
         val urlCatMaps = "maps$urlCat"
         val urlCatPk = "pk$urlCat"
 
@@ -134,241 +134,22 @@ class UpdateMan {
                             } finally {
                                 File(filePath + zipFile).delete()
                                 Log.d("cek", "6")
-                                //overridePendingTransition(0,0)
 
-                                val strReq: StringRequest =
-                                    object : StringRequest(
-                                        Method.POST,
-                                        "$urlMaps/getDataPlot.php",
-                                        Response.Listener { response ->
-                                            try {
-                                                val jObj = JSONObject(response)
-                                                val success = jObj.getInt("success")
+                                val fMaps = File(filePath + urlCatMaps)
+                                if (!fMaps.exists()) {
+                                    checkMd5Maps(urlCatMaps, context, filePath, loaderView, prefManager.idReg.toString())
 
-                                                if (success == 1) {
-                                                    Log.d("logMaps", jObj.getString(Database.TAG_MESSAGE))
-
-                                                    val configMaps = PRDownloaderConfig.newBuilder()
-                                                        .setReadTimeout(30000)
-                                                        .setConnectTimeout(30000)
-                                                        .build()
-                                                    PRDownloader.initialize(context.applicationContext, configMaps)
-                                                    val zipFileMaps = "$urlCatMaps.zip"
-                                                    val urlm = "$urlMaps/${urlCatMaps.substringBefore(".")}.zip"
-                                                    Log.d("testzip", "zipFileMaps: $zipFileMaps || url: $urlm")
-                                                    @Suppress("UNUSED_VARIABLE") val downloadId =
-                                                        PRDownloader.download(urlm, filePath, zipFileMaps)
-                                                            .build()
-                                                            .setOnStartOrResumeListener { }
-                                                            .setOnPauseListener { }
-                                                            .setOnCancelListener { }
-                                                            .setOnProgressListener { progress ->
-                                                                val progressPercent: Long =
-                                                                    progress.currentBytes * 100 / progress.totalBytes
-                                                                Log.d("cek", "1")
-                                                                loaderView.progressBarFileLoader.progress =
-                                                                    progressPercent.toInt()
-                                                                Log.d("cek", "2")
-                                                                loaderView.textViewFileLoader.text =
-                                                                    "${getBytesToMBString(progress.currentBytes)} / ${
-                                                                        getBytesToMBString(progress.totalBytes)
-                                                                    }"
-                                                                Log.d("cek", "3")
-                                                                loaderView.progressBarFileLoader.isIndeterminate = false
-                                                                Log.d("cek", "4")
-                                                            }
-                                                            .start(object : OnDownloadListener {
-                                                                @RequiresApi(Build.VERSION_CODES.O)
-                                                                override fun onDownloadComplete() {
-                                                                    try {
-                                                                        FileMan().unzip(filePath + zipFileMaps, filePath)
-                                                                        Log.d("cek", "5")
-                                                                    } finally {
-                                                                        File(filePath + zipFileMaps).delete()
-                                                                        Log.d("cek", "6")
-
-                                                                        Log.d("logMaps", "namefile: ${urlCatMaps.substringBefore(".")}.zip")
-                                                                        val deleteRequest = StringRequest(
-                                                                            Method.GET,
-                                                                            "$urlMaps/deleteZipMaps.php?name=${urlCatMaps.substringBefore(".")}.zip",
-                                                                            { response ->
-                                                                                try {
-                                                                                    val jObj = JSONObject(response)
-                                                                                    val success = jObj.getInt("success")
-
-                                                                                    if (success == 1) {
-                                                                                        Log.d(
-                                                                                            "logMaps",
-                                                                                            jObj.getString(Database.TAG_MESSAGE)
-                                                                                        )
-                                                                                    } else {
-                                                                                        Log.d(
-                                                                                            "logMaps",
-                                                                                            jObj.getString(Database.TAG_MESSAGE)
-                                                                                        )
-                                                                                    }
-                                                                                } catch (e: JSONException) {
-                                                                                    Log.d("logMaps", "Error: $e")
-                                                                                    e.printStackTrace()
-                                                                                }
-                                                                                loaderView.visibility = View.GONE
-                                                                            },
-                                                                            { error ->
-                                                                                loaderView.visibility = View.GONE
-                                                                                Log.d("logMaps", "Terjadi kesalahan koneksi: delete file")
-                                                                            })
-                                                                        Volley.newRequestQueue(context)
-                                                                            .add(deleteRequest)
-
-                                                                        val strReq: StringRequest =
-                                                                            object : StringRequest(
-                                                                                Method.POST,
-                                                                                "$urlMaps/getPlotPkKuning.php",
-                                                                                Response.Listener { response ->
-                                                                                    try {
-                                                                                        val jObj = JSONObject(response)
-                                                                                        val success = jObj.getInt("success")
-
-                                                                                        if (success == 1) {
-                                                                                            Log.d("logMaps", jObj.getString(Database.TAG_MESSAGE))
-
-                                                                                            val configPk = PRDownloaderConfig.newBuilder()
-                                                                                                .setReadTimeout(30000)
-                                                                                                .setConnectTimeout(30000)
-                                                                                                .build()
-                                                                                            PRDownloader.initialize(context.applicationContext, configPk)
-                                                                                            val zipFilePk = "$urlCatPk.zip"
-                                                                                            val urlpk = "$urlMaps/${urlCatPk.substringBefore(".")}.zip"
-                                                                                            Log.d("testzip", "zipFilePk: $zipFilePk || url: $urlpk")
-                                                                                            @Suppress("UNUSED_VARIABLE") val downloadId =
-                                                                                                PRDownloader.download(urlpk, filePath, zipFilePk)
-                                                                                                    .build()
-                                                                                                    .setOnStartOrResumeListener { }
-                                                                                                    .setOnPauseListener { }
-                                                                                                    .setOnCancelListener { }
-                                                                                                    .setOnProgressListener { progress ->
-                                                                                                        val progressPercent: Long =
-                                                                                                            progress.currentBytes * 100 / progress.totalBytes
-                                                                                                        Log.d("cek", "1")
-                                                                                                        loaderView.progressBarFileLoader.progress =
-                                                                                                            progressPercent.toInt()
-                                                                                                        Log.d("cek", "2")
-                                                                                                        loaderView.textViewFileLoader.text =
-                                                                                                            "${getBytesToMBString(progress.currentBytes)} / ${
-                                                                                                                getBytesToMBString(progress.totalBytes)
-                                                                                                            }"
-                                                                                                        Log.d("cek", "3")
-                                                                                                        loaderView.progressBarFileLoader.isIndeterminate = false
-                                                                                                        Log.d("cek", "4")
-                                                                                                    }
-                                                                                                    .start(object : OnDownloadListener {
-                                                                                                        @RequiresApi(Build.VERSION_CODES.O)
-                                                                                                        override fun onDownloadComplete() {
-                                                                                                            try {
-                                                                                                                FileMan().unzip(filePath + zipFilePk, filePath)
-                                                                                                                Log.d("cek", "5")
-                                                                                                            } finally {
-                                                                                                                File(filePath + zipFilePk).delete()
-                                                                                                                Log.d("cek", "6")
-
-                                                                                                                Log.d("logMaps", "namefile: ${urlCatPk.substringBefore(".")}.zip")
-                                                                                                                val deleteRequest = StringRequest(
-                                                                                                                    Method.GET,
-                                                                                                                    "$urlMaps/deleteZipMaps.php?name=${urlCatPk.substringBefore(".")}.zip",
-                                                                                                                    { response ->
-                                                                                                                        try {
-                                                                                                                            val jObj = JSONObject(response)
-                                                                                                                            val success = jObj.getInt("success")
-
-                                                                                                                            if (success == 1) {
-                                                                                                                                Log.d(
-                                                                                                                                    "logMaps",
-                                                                                                                                    jObj.getString(Database.TAG_MESSAGE)
-                                                                                                                                )
-                                                                                                                            } else {
-                                                                                                                                Log.d(
-                                                                                                                                    "logMaps",
-                                                                                                                                    jObj.getString(Database.TAG_MESSAGE)
-                                                                                                                                )
-                                                                                                                            }
-                                                                                                                        } catch (e: JSONException) {
-                                                                                                                            Log.d("logMaps", "Error: $e")
-                                                                                                                            e.printStackTrace()
-                                                                                                                        }
-                                                                                                                        loaderView.visibility = View.GONE
-                                                                                                                    },
-                                                                                                                    { error ->
-                                                                                                                        loaderView.visibility = View.GONE
-                                                                                                                        Log.d("logMaps", "Terjadi kesalahan koneksi: delete file")
-                                                                                                                    })
-                                                                                                                Volley.newRequestQueue(context)
-                                                                                                                    .add(deleteRequest)
-
-
-                                                                                                                intentTo.putExtra("ViewType", "Online")
-                                                                                                                context.startActivity(intentTo)
-                                                                                                                Log.d("cek", "7")
-                                                                                                            }
-                                                                                                        }
-
-                                                                                                        override fun onError(error: Error?) {
-                                                                                                            loaderView.visibility = View.GONE
-                                                                                                            Log.d("logMaps", "Error: $error")
-                                                                                                        }
-                                                                                                    })
-                                                                                        } else {
-                                                                                            loaderView.visibility = View.GONE
-                                                                                            Log.d("logMaps", "${jObj.getString(Database.TAG_MESSAGE)}")
-                                                                                        }
-                                                                                    } catch (e: JSONException) {
-                                                                                        loaderView.visibility = View.GONE
-                                                                                        Log.d("logMaps", "Data error, hubungi pengembang: $e")
-                                                                                        e.printStackTrace()
-                                                                                    }
-                                                                                },
-                                                                                Response.ErrorListener { error ->
-                                                                                    loaderView.visibility = View.GONE
-                                                                                    Log.d("logMaps", "Terjadi kesalahan koneksi: $error")
-                                                                                }) {
-                                                                                override fun getParams(): Map<String, String> {
-                                                                                    val params: MutableMap<String, String> =
-                                                                                        java.util.HashMap()
-                                                                                    params["dataReg"] = urlCat
-                                                                                    params["est"] = strEst
-                                                                                    return params
-                                                                                }
-                                                                            }
-                                                                        Volley.newRequestQueue(context).add(strReq)
-                                                                    }
-                                                                }
-
-                                                                override fun onError(error: Error?) {
-                                                                    loaderView.visibility = View.GONE
-                                                                    Log.d("logMaps", "Error: $error")
-                                                                }
-                                                            })
-                                                } else {
-                                                    loaderView.visibility = View.GONE
-                                                    Log.d("logMaps", "${jObj.getString(Database.TAG_MESSAGE)}")
-                                                }
-                                            } catch (e: JSONException) {
-                                                loaderView.visibility = View.GONE
-                                                Log.d("logMaps", "Data error, hubungi pengembang: $e")
-                                                e.printStackTrace()
-                                            }
-                                        },
-                                        Response.ErrorListener { error ->
-                                            loaderView.visibility = View.GONE
-                                            Log.d("logMaps", "Terjadi kesalahan koneksi: $error")
-                                        }) {
-                                        override fun getParams(): Map<String, String> {
-                                            val params: MutableMap<String, String> =
-                                                java.util.HashMap()
-                                            params["reg"] = idReg
-                                            return params
-                                        }
+                                    val fPk = File(filePath + urlCatPk)
+                                    if (!fPk.exists()) {
+                                        checkMd5Pk(intentTo, urlCat, urlCatPk, context, filePath, loaderView, strEst)
+                                    } else {
+                                        intentTo.putExtra("ViewType", "Online")
+                                        context.startActivity(intentTo)
                                     }
-                                Volley.newRequestQueue(context).add(strReq)
+                                } else {
+                                    intentTo.putExtra("ViewType", "Online")
+                                    context.startActivity(intentTo)
+                                }
                             }
                         }
 
@@ -380,6 +161,282 @@ class UpdateMan {
             intentTo.putExtra("ViewType", "Online")
             context.startActivity(intentTo)
         }
+    }
+
+    fun checkMd5Maps(
+        urlCatMaps: String,
+        context: Context,
+        filePath: String,
+        loaderView: View,
+        idReg: String,
+        hexMapsApp: String? = ""
+    ) {
+        val strReq: StringRequest =
+            @SuppressLint("SetTextI18n")
+            object : StringRequest(
+                Method.POST,
+                "$urlMaps/checkMapsBlok.php",
+                Response.Listener { response ->
+                    try {
+                        val jObj = JSONObject(response)
+                        val success = jObj.getInt("success")
+
+                        if (success == 1) {
+                            Log.d("logMaps", jObj.getString(Database.TAG_MESSAGE))
+
+                            if (hexMapsApp!!.isNotEmpty()) {
+                                Toasty.success(context, jObj.getString(Database.TAG_MESSAGE)).show()
+                            }
+                        } else if (success == 2) {
+                            Log.d("logMaps", jObj.getString(Database.TAG_MESSAGE))
+
+                            val prefManager = PrefManager(context)
+                            prefManager.hexMaps = jObj.getString("hex")
+
+                            val configMaps = PRDownloaderConfig.newBuilder()
+                                .setReadTimeout(30000)
+                                .setConnectTimeout(30000)
+                                .build()
+                            PRDownloader.initialize(context.applicationContext, configMaps)
+                            val zipFileMaps = "$urlCatMaps.zip"
+                            val urlZipMaps = "$urlMaps/${urlCatMaps.substringBefore(".")}.zip"
+                            Log.d("testzip", "zipFileMaps: $zipFileMaps || url: $urlZipMaps")
+                            @Suppress("UNUSED_VARIABLE") val downloadId =
+                                PRDownloader.download(urlZipMaps, filePath, zipFileMaps)
+                                    .build()
+                                    .setOnStartOrResumeListener { }
+                                    .setOnPauseListener { }
+                                    .setOnCancelListener { }
+                                    .setOnProgressListener { progress ->
+                                        val progressPercent: Long =
+                                            progress.currentBytes * 100 / progress.totalBytes
+                                        Log.d("cek", "1")
+                                        loaderView.progressBarFileLoader.progress =
+                                            progressPercent.toInt()
+                                        Log.d("cek", "2")
+                                        loaderView.textViewFileLoader.text =
+                                            "${getBytesToMBString(progress.currentBytes)} / ${
+                                                getBytesToMBString(progress.totalBytes)
+                                            }"
+                                        Log.d("cek", "3")
+                                        loaderView.progressBarFileLoader.isIndeterminate = false
+                                        Log.d("cek", "4")
+                                    }
+                                    .start(object : OnDownloadListener {
+                                        @RequiresApi(Build.VERSION_CODES.O)
+                                        override fun onDownloadComplete() {
+                                            try {
+                                                FileMan().unzip(filePath + zipFileMaps, filePath)
+                                                Log.d("cek", "5")
+                                            } finally {
+                                                File(filePath + zipFileMaps).delete()
+                                                Log.d("cek", "6")
+
+                                                Log.d("logMaps", "namefile: ${urlCatMaps.substringBefore(".")}.zip")
+                                                val deleteRequest = StringRequest(
+                                                    Method.GET,
+                                                    "$urlMaps/deleteZipMaps.php?name=${urlCatMaps.substringBefore(".")}.zip",
+                                                    { response ->
+                                                        try {
+                                                            val jObj = JSONObject(response)
+                                                            val success = jObj.getInt("success")
+
+                                                            if (success == 1) {
+                                                                Log.d(
+                                                                    "logMaps",
+                                                                    jObj.getString(Database.TAG_MESSAGE)
+                                                                )
+                                                            } else {
+                                                                Log.d(
+                                                                    "logMaps",
+                                                                    jObj.getString(Database.TAG_MESSAGE)
+                                                                )
+                                                            }
+                                                        } catch (e: JSONException) {
+                                                            Log.d("logMaps", "Error: $e")
+                                                            e.printStackTrace()
+                                                        }
+                                                    },
+                                                    { error ->
+                                                        Log.d("logMaps", "Terjadi kesalahan koneksi: delete file")
+                                                    })
+                                                Volley.newRequestQueue(context)
+                                                    .add(deleteRequest)
+                                            }
+                                        }
+
+                                        override fun onError(error: Error?) {
+                                            Log.d("logMaps", "Error: $error")
+                                        }
+                                    })
+                        } else {
+                            Log.d("logMaps", "${jObj.getString(Database.TAG_MESSAGE)}")
+                        }
+                    } catch (e: JSONException) {
+                        Log.d("logMaps", "Data error, hubungi pengembang: $e")
+                        e.printStackTrace()
+                    }
+                },
+                Response.ErrorListener { error ->
+                    Log.d("logMaps", "Terjadi kesalahan koneksi: $error")
+                }) {
+                override fun getParams(): Map<String, String> {
+                    val params: MutableMap<String, String> =
+                        java.util.HashMap()
+                    params["reg"] = idReg
+                    params["hexApp"] = hexMapsApp!!
+                    return params
+                }
+            }
+        Volley.newRequestQueue(context).add(strReq)
+    }
+
+    fun checkMd5Pk(
+        intentTo: Intent? = null,
+        urlCat: String,
+        urlCatPk: String,
+        context: Context,
+        filePath: String,
+        loaderView: View,
+        selectedEst: String,
+        hexMapsApp: String? = ""
+    ) {
+        val strReq: StringRequest =
+            @SuppressLint("SetTextI18n")
+            object : StringRequest(
+                Method.POST,
+                "$urlMaps/checkMapsPk.php",
+                Response.Listener { response ->
+                    try {
+                        val jObj = JSONObject(response)
+                        val success = jObj.getInt("success")
+
+                        if (success == 1) {
+                            if (hexMapsApp!!.isNotEmpty()) {
+                                Toasty.success(context, jObj.getString(Database.TAG_MESSAGE)).show()
+
+                                if (intentTo != null) {
+                                    intentTo.putExtra("ViewType", "Online")
+                                    context.startActivity(intentTo)
+                                }
+                            }
+
+                            loaderView.visibility = View.GONE
+                            Log.d("logMaps", jObj.getString(Database.TAG_MESSAGE))
+                        } else if (success == 2) {
+                            Log.d("logMaps", jObj.getString(Database.TAG_MESSAGE))
+
+                            val prefManager = PrefManager(context)
+                            prefManager.hexPk = jObj.getString("hex")
+
+                            val configMaps = PRDownloaderConfig.newBuilder()
+                                .setReadTimeout(30000)
+                                .setConnectTimeout(30000)
+                                .build()
+                            PRDownloader.initialize(context.applicationContext, configMaps)
+                            val zipFileMaps = "$urlCatPk.zip"
+                            val urlZipMaps = "$urlMaps/${urlCatPk.substringBefore(".")}.zip"
+                            Log.d("testzip", "zipFileMaps: $zipFileMaps || url: $urlZipMaps")
+                            @Suppress("UNUSED_VARIABLE") val downloadId =
+                                PRDownloader.download(urlZipMaps, filePath, zipFileMaps)
+                                    .build()
+                                    .setOnStartOrResumeListener { }
+                                    .setOnPauseListener { }
+                                    .setOnCancelListener { }
+                                    .setOnProgressListener { progress ->
+                                        val progressPercent: Long =
+                                            progress.currentBytes * 100 / progress.totalBytes
+                                        Log.d("cek", "1")
+                                        loaderView.progressBarFileLoader.progress =
+                                            progressPercent.toInt()
+                                        Log.d("cek", "2")
+                                        loaderView.textViewFileLoader.text =
+                                            "${getBytesToMBString(progress.currentBytes)} / ${
+                                                getBytesToMBString(progress.totalBytes)
+                                            }"
+                                        Log.d("cek", "3")
+                                        loaderView.progressBarFileLoader.isIndeterminate = false
+                                        Log.d("cek", "4")
+                                    }
+                                    .start(object : OnDownloadListener {
+                                        @RequiresApi(Build.VERSION_CODES.O)
+                                        override fun onDownloadComplete() {
+                                            try {
+                                                FileMan().unzip(filePath + zipFileMaps, filePath)
+                                                Log.d("cek", "5")
+                                            } finally {
+                                                File(filePath + zipFileMaps).delete()
+                                                Log.d("cek", "6")
+
+                                                Log.d("logMaps", "namefile: ${urlCatPk.substringBefore(".")}.zip")
+                                                val deleteRequest = StringRequest(
+                                                    Method.GET,
+                                                    "$urlMaps/deleteZipMaps.php?name=${urlCatPk.substringBefore(".")}.zip",
+                                                    { response ->
+                                                        try {
+                                                            val jObj = JSONObject(response)
+                                                            val success = jObj.getInt("success")
+
+                                                            if (success == 1) {
+                                                                Log.d(
+                                                                    "logMaps",
+                                                                    jObj.getString(Database.TAG_MESSAGE)
+                                                                )
+                                                            } else {
+                                                                Log.d(
+                                                                    "logMaps",
+                                                                    jObj.getString(Database.TAG_MESSAGE)
+                                                                )
+                                                            }
+                                                        } catch (e: JSONException) {
+                                                            Log.d("logMaps", "Error: $e")
+                                                            e.printStackTrace()
+                                                        }
+                                                    },
+                                                    { error ->
+                                                        Log.d("logMaps", "Terjadi kesalahan koneksi: delete file")
+                                                    })
+                                                Volley.newRequestQueue(context)
+                                                    .add(deleteRequest)
+
+                                                loaderView.visibility = View.GONE
+
+                                                if (intentTo != null) {
+                                                    intentTo.putExtra("ViewType", "Online")
+                                                    context.startActivity(intentTo)
+                                                }
+                                            }
+                                        }
+
+                                        override fun onError(error: Error?) {
+                                            loaderView.visibility = View.GONE
+                                            Log.d("logMaps", "Error: $error")
+                                        }
+                                    })
+                        } else {
+                            loaderView.visibility = View.GONE
+                            Log.d("logMaps", "${jObj.getString(Database.TAG_MESSAGE)}")
+                        }
+                    } catch (e: JSONException) {
+                        loaderView.visibility = View.GONE
+                        Log.d("logMaps", "Data error, hubungi pengembang: $e")
+                        e.printStackTrace()
+                    }
+                },
+                Response.ErrorListener { error ->
+                    loaderView.visibility = View.GONE
+                    Log.d("logMaps", "Terjadi kesalahan koneksi: $error")
+                }) {
+                override fun getParams(): Map<String, String> {
+                    val params: MutableMap<String, String> =
+                        java.util.HashMap()
+                    params["hexApp"] = hexMapsApp!!
+                    params["dataReg"] = urlCat
+                    params["est"] = selectedEst
+                    return params
+                }
+            }
+        Volley.newRequestQueue(context).add(strReq)
     }
 
     fun updateListPupuk(context: Context) {
@@ -459,18 +516,40 @@ class UpdateMan {
         return java.lang.String.format(Locale.ENGLISH, "%.2fMb", bytes / (1024.00 * 1024.00))
     }
 
-    fun md5Checksum(data: String): String {
-        var digest = ""
-        try { // Define the data file path and create an InputStream object.
-            val file = File(data)
-            val `is`: InputStream = FileInputStream(file)
-            // Calculates the MD5 digest of the given InputStream object.
-            // It will generate a 32 characters hex string.
-            digest = String(Hex.encodeHex(DigestUtils.md5(`is`)))
-        } catch (e: IOException) {
-            e.printStackTrace()
+    fun convertFileToByteArray(file: File): ByteArray {
+        val fileInputStream = FileInputStream(file)
+        val byteArray = ByteArray(file.length().toInt())
+
+        try {
+            fileInputStream.read(byteArray)
+        } finally {
+            fileInputStream.close()
         }
-        return digest
+
+        return byteArray
+    }
+
+    fun md5Checksum(data: String? = "", byteArray: ByteArray? = null): String {
+        var digest = ""
+        val hexString = StringBuilder()
+        if (data!!.isNotEmpty()) {
+            try { // Define the data file path and create an InputStream object.
+                val file = File(data)
+                val `is`: InputStream = FileInputStream(file)
+                // Calculates the MD5 digest of the given InputStream object.
+                // It will generate a 32 characters hex string.
+                digest = String(Hex.encodeHex(DigestUtils.md5(`is`)))
+            } catch (e: IOException) {
+                e.printStackTrace()
+            }
+        } else {
+            val md5Digest = MessageDigest.getInstance("MD5")
+            val md5Bytes = md5Digest.digest(byteArray!!)
+            for (byte in md5Bytes) {
+                hexString.append(String.format("%02x", byte))
+            }
+        }
+        return if (data.isNotEmpty()) digest else hexString.toString()
     }
 
     fun updater(
@@ -488,7 +567,7 @@ class UpdateMan {
         }
     }
 
-    fun checkUpdateYellow(context: Context, loaderView: View) {
+    fun checkUpdateYellow(intentTo: Intent? = null, context: Context, loaderView: View) {
         val prefManager = PrefManager(context)
         val urlCat = prefManager.dataReg!!
         val urlCatMaps = "maps$urlCat"
@@ -514,434 +593,23 @@ class UpdateMan {
             loaderView.textViewFileLoader.text = ""
 
             val filePath = context.getExternalFilesDir(null)?.absolutePath + "/MAIN/"
-
-            val mapsPath = File(filePath + urlCatMaps)
-            if (mapsPath.exists()) {
-                mapsPath.delete()
+            val fMaps = File(filePath + urlCatMaps)
+            if (!fMaps.exists()) {
+                checkMd5Maps(urlCatMaps, context, filePath, loaderView, prefManager.idReg.toString())
+            } else {
+                val byteArray = convertFileToByteArray(fMaps)
+                val md5Checksum = md5Checksum("", byteArray)
+                checkMd5Maps(urlCatMaps, context, filePath, loaderView, prefManager.idReg.toString(), md5Checksum)
             }
 
-            val pkPath = File(filePath + urlCatPk)
-            if (pkPath.exists()) {
-                pkPath.delete()
+            val fPk = File(filePath + urlCatPk)
+            if (!fPk.exists()) {
+                checkMd5Pk(intentTo, urlCat, urlCatPk, context, filePath, loaderView, prefManager.estYellow.toString())
+            } else {
+                val byteArray = convertFileToByteArray(fPk)
+                val md5Checksum = md5Checksum("", byteArray)
+                checkMd5Pk(intentTo, urlCat, urlCatPk, context, filePath, loaderView, prefManager.estYellow.toString(), md5Checksum)
             }
-
-            val strReq: StringRequest =
-                @SuppressLint("SetTextI18n")
-                object : StringRequest(
-                    Method.POST,
-                    "$urlMaps/getDataPlot.php",
-                    Response.Listener { response ->
-                        try {
-                            val jObj = JSONObject(response)
-                            val success = jObj.getInt("success")
-
-                            if (success == 1) {
-                                Log.d("logMaps", jObj.getString(Database.TAG_MESSAGE))
-
-                                val configMaps = PRDownloaderConfig.newBuilder()
-                                    .setReadTimeout(30000)
-                                    .setConnectTimeout(30000)
-                                    .build()
-                                PRDownloader.initialize(context.applicationContext, configMaps)
-                                val zipFileMaps = "$urlCatMaps.zip"
-                                val urlm = "$urlMaps/${urlCatMaps.substringBefore(".")}.zip"
-                                Log.d("testzip", "zipFileMaps: $zipFileMaps || url: $urlm")
-                                @Suppress("UNUSED_VARIABLE") val downloadId =
-                                    PRDownloader.download(urlm, filePath, zipFileMaps)
-                                        .build()
-                                        .setOnStartOrResumeListener { }
-                                        .setOnPauseListener { }
-                                        .setOnCancelListener { }
-                                        .setOnProgressListener { progress ->
-                                            val progressPercent: Long =
-                                                progress.currentBytes * 100 / progress.totalBytes
-                                            Log.d("cek", "1")
-                                            loaderView.progressBarFileLoader.progress =
-                                                progressPercent.toInt()
-                                            Log.d("cek", "2")
-                                            loaderView.textViewFileLoader.text =
-                                                "${getBytesToMBString(progress.currentBytes)} / ${
-                                                    getBytesToMBString(progress.totalBytes)
-                                                }"
-                                            Log.d("cek", "3")
-                                            loaderView.progressBarFileLoader.isIndeterminate = false
-                                            Log.d("cek", "4")
-                                        }
-                                        .start(object : OnDownloadListener {
-                                            @RequiresApi(Build.VERSION_CODES.O)
-                                            override fun onDownloadComplete() {
-                                                try {
-                                                    FileMan().unzip(
-                                                        filePath + zipFileMaps,
-                                                        filePath
-                                                    )
-                                                    Log.d("cek", "5")
-                                                } finally {
-                                                    File(filePath + zipFileMaps).delete()
-                                                    Log.d("cek", "6")
-
-                                                    Log.d(
-                                                        "logMaps",
-                                                        "namefile: ${urlCatMaps.substringBefore(".")}.zip"
-                                                    )
-                                                    val deleteRequest = StringRequest(
-                                                        Method.GET,
-                                                        "$urlMaps/deleteZipMaps.php?name=${
-                                                            urlCatMaps.substringBefore(
-                                                                "."
-                                                            )
-                                                        }.zip",
-                                                        { response ->
-                                                            try {
-                                                                val jObj = JSONObject(response)
-                                                                val success = jObj.getInt("success")
-
-                                                                if (success == 1) {
-                                                                    Log.d(
-                                                                        "logMaps",
-                                                                        jObj.getString(Database.TAG_MESSAGE)
-                                                                    )
-                                                                } else {
-                                                                    Log.d(
-                                                                        "logMaps",
-                                                                        jObj.getString(Database.TAG_MESSAGE)
-                                                                    )
-                                                                }
-                                                            } catch (e: JSONException) {
-                                                                Log.d("logMaps", "Error: $e")
-                                                                e.printStackTrace()
-                                                            }
-                                                        },
-                                                        { error ->
-                                                            Log.d(
-                                                                "logMaps",
-                                                                "Terjadi kesalahan koneksi: delete file"
-                                                            )
-                                                        })
-                                                    Volley.newRequestQueue(context)
-                                                        .add(deleteRequest)
-
-                                                    val strReq: StringRequest =
-                                                        object : StringRequest(
-                                                            Method.POST,
-                                                            "$urlMaps/getPlotPkKuning.php",
-                                                            Response.Listener { response ->
-                                                                try {
-                                                                    val jObj = JSONObject(response)
-                                                                    val success =
-                                                                        jObj.getInt("success")
-
-                                                                    if (success == 1) {
-                                                                        Log.d(
-                                                                            "logMaps",
-                                                                            jObj.getString(Database.TAG_MESSAGE)
-                                                                        )
-
-                                                                        val configPk =
-                                                                            PRDownloaderConfig.newBuilder()
-                                                                                .setReadTimeout(
-                                                                                    30000
-                                                                                )
-                                                                                .setConnectTimeout(
-                                                                                    30000
-                                                                                )
-                                                                                .build()
-                                                                        PRDownloader.initialize(
-                                                                            context.applicationContext,
-                                                                            configPk
-                                                                        )
-                                                                        val zipFilePk =
-                                                                            "$urlCatPk.zip"
-                                                                        val urlpk = "$urlMaps/${
-                                                                            urlCatPk.substringBefore(
-                                                                                "."
-                                                                            )
-                                                                        }.zip"
-                                                                        Log.d(
-                                                                            "testzip",
-                                                                            "zipFilePk: $zipFilePk || url: $urlpk"
-                                                                        )
-                                                                        @Suppress("UNUSED_VARIABLE") val downloadId =
-                                                                            PRDownloader.download(
-                                                                                urlpk,
-                                                                                filePath,
-                                                                                zipFilePk
-                                                                            )
-                                                                                .build()
-                                                                                .setOnStartOrResumeListener { }
-                                                                                .setOnPauseListener { }
-                                                                                .setOnCancelListener { }
-                                                                                .setOnProgressListener { progress ->
-                                                                                    val progressPercent: Long =
-                                                                                        progress.currentBytes * 100 / progress.totalBytes
-                                                                                    Log.d(
-                                                                                        "cek",
-                                                                                        "1"
-                                                                                    )
-                                                                                    loaderView.progressBarFileLoader.progress =
-                                                                                        progressPercent.toInt()
-                                                                                    Log.d(
-                                                                                        "cek",
-                                                                                        "2"
-                                                                                    )
-                                                                                    loaderView.textViewFileLoader.text =
-                                                                                        "${
-                                                                                            getBytesToMBString(
-                                                                                                progress.currentBytes
-                                                                                            )
-                                                                                        } / ${
-                                                                                            getBytesToMBString(
-                                                                                                progress.totalBytes
-                                                                                            )
-                                                                                        }"
-                                                                                    Log.d(
-                                                                                        "cek",
-                                                                                        "3"
-                                                                                    )
-                                                                                    loaderView.progressBarFileLoader.isIndeterminate =
-                                                                                        false
-                                                                                    Log.d(
-                                                                                        "cek",
-                                                                                        "4"
-                                                                                    )
-                                                                                }
-                                                                                .start(object :
-                                                                                    OnDownloadListener {
-                                                                                    @RequiresApi(
-                                                                                        Build.VERSION_CODES.O
-                                                                                    )
-                                                                                    override fun onDownloadComplete() {
-                                                                                        try {
-                                                                                            FileMan().unzip(
-                                                                                                filePath + zipFilePk,
-                                                                                                filePath
-                                                                                            )
-                                                                                            Log.d(
-                                                                                                "cek",
-                                                                                                "5"
-                                                                                            )
-                                                                                        } finally {
-                                                                                            File(
-                                                                                                filePath + zipFilePk
-                                                                                            ).delete()
-                                                                                            Log.d(
-                                                                                                "cek",
-                                                                                                "6"
-                                                                                            )
-
-                                                                                            Log.d(
-                                                                                                "logMaps",
-                                                                                                "namefile: ${
-                                                                                                    urlCatPk.substringBefore(
-                                                                                                        "."
-                                                                                                    )
-                                                                                                }.zip"
-                                                                                            )
-                                                                                            val deleteRequest =
-                                                                                                StringRequest(
-                                                                                                    Method.GET,
-                                                                                                    "$urlMaps/deleteZipMaps.php?name=${
-                                                                                                        urlCatPk.substringBefore(
-                                                                                                            "."
-                                                                                                        )
-                                                                                                    }.zip",
-                                                                                                    { response ->
-                                                                                                        try {
-                                                                                                            val jObj =
-                                                                                                                JSONObject(
-                                                                                                                    response
-                                                                                                                )
-                                                                                                            val success =
-                                                                                                                jObj.getInt(
-                                                                                                                    "success"
-                                                                                                                )
-
-                                                                                                            if (success == 1) {
-                                                                                                                Log.d(
-                                                                                                                    "logMaps",
-                                                                                                                    jObj.getString(
-                                                                                                                        Database.TAG_MESSAGE
-                                                                                                                    )
-                                                                                                                )
-                                                                                                            } else {
-                                                                                                                Log.d(
-                                                                                                                    "logMaps",
-                                                                                                                    jObj.getString(
-                                                                                                                        Database.TAG_MESSAGE
-                                                                                                                    )
-                                                                                                                )
-                                                                                                            }
-                                                                                                            Toasty.success(
-                                                                                                                context,
-                                                                                                                "Data Pokok Kuning berhasil diupdate",
-                                                                                                                Toast.LENGTH_SHORT
-                                                                                                            )
-                                                                                                                .show()
-                                                                                                        } catch (e: JSONException) {
-                                                                                                            Toasty.warning(
-                                                                                                                context,
-                                                                                                                "Error update pokok kuning: $e",
-                                                                                                                Toast.LENGTH_SHORT
-                                                                                                            )
-                                                                                                                .show()
-                                                                                                            Log.d(
-                                                                                                                "logMaps",
-                                                                                                                "Error: $e"
-                                                                                                            )
-                                                                                                            e.printStackTrace()
-                                                                                                        }
-                                                                                                        loaderView.visibility =
-                                                                                                            View.GONE
-                                                                                                    },
-                                                                                                    { error ->
-                                                                                                        loaderView.visibility =
-                                                                                                            View.GONE
-                                                                                                        Log.d(
-                                                                                                            "logMaps",
-                                                                                                            "Terjadi kesalahan koneksi: delete file"
-                                                                                                        )
-                                                                                                    })
-                                                                                            Volley.newRequestQueue(
-                                                                                                context
-                                                                                            )
-                                                                                                .add(
-                                                                                                    deleteRequest
-                                                                                                )
-                                                                                            Log.d(
-                                                                                                "cek",
-                                                                                                "7"
-                                                                                            )
-                                                                                        }
-                                                                                    }
-
-                                                                                    override fun onError(
-                                                                                        error: Error?
-                                                                                    ) {
-                                                                                        loaderView.visibility =
-                                                                                            View.GONE
-                                                                                        Toasty.warning(
-                                                                                            context,
-                                                                                            "Error download pokok kuning: $error",
-                                                                                            Toast.LENGTH_SHORT
-                                                                                        )
-                                                                                            .show()
-                                                                                        Log.d(
-                                                                                            "logMaps",
-                                                                                            "Error: $error"
-                                                                                        )
-                                                                                    }
-                                                                                })
-                                                                    } else {
-                                                                        loaderView.visibility =
-                                                                            View.GONE
-                                                                        Toasty.warning(
-                                                                            context,
-                                                                            jObj.getString(Database.TAG_MESSAGE),
-                                                                            Toast.LENGTH_SHORT
-                                                                        )
-                                                                            .show()
-                                                                        Log.d(
-                                                                            "logMaps",
-                                                                            "${
-                                                                                jObj.getString(
-                                                                                    Database.TAG_MESSAGE
-                                                                                )
-                                                                            }"
-                                                                        )
-                                                                    }
-                                                                } catch (e: JSONException) {
-                                                                    loaderView.visibility =
-                                                                        View.GONE
-                                                                    Toasty.warning(
-                                                                        context,
-                                                                        "Data error, hubungi pengembang: $e",
-                                                                        Toast.LENGTH_SHORT
-                                                                    )
-                                                                        .show()
-                                                                    Log.d(
-                                                                        "logMaps",
-                                                                        "Data error, hubungi pengembang: $e"
-                                                                    )
-                                                                    e.printStackTrace()
-                                                                }
-                                                            },
-                                                            Response.ErrorListener { error ->
-                                                                loaderView.visibility = View.GONE
-                                                                Toasty.warning(
-                                                                    context,
-                                                                    "Terjadi kesalahan koneksi update data, e: $error",
-                                                                    Toast.LENGTH_SHORT
-                                                                )
-                                                                    .show()
-                                                                Log.d(
-                                                                    "logMaps",
-                                                                    "Terjadi kesalahan koneksi: $error"
-                                                                )
-                                                            }) {
-                                                            override fun getParams(): Map<String, String> {
-                                                                val params: MutableMap<String, String> =
-                                                                    java.util.HashMap()
-                                                                params["dataReg"] = urlCat
-                                                                params["est"] =
-                                                                    prefManager.estYellow!!
-                                                                return params
-                                                            }
-                                                        }
-                                                    Volley.newRequestQueue(context).add(strReq)
-                                                }
-                                            }
-
-                                            override fun onError(error: Error?) {
-                                                loaderView.visibility = View.GONE
-                                                Toasty.warning(
-                                                    context,
-                                                    "Terjadi kesalahan koneksi update data, e: $error",
-                                                    Toast.LENGTH_SHORT
-                                                )
-                                                    .show()
-                                                Log.d("logMaps", "Error: $error")
-                                            }
-                                        })
-                            } else {
-                                loaderView.visibility = View.GONE
-                                Toasty.warning(
-                                    context,
-                                    jObj.getString(Database.TAG_MESSAGE),
-                                    Toast.LENGTH_SHORT
-                                )
-                                    .show()
-                                Log.d("logMaps", jObj.getString(Database.TAG_MESSAGE))
-                            }
-                        } catch (e: JSONException) {
-                            loaderView.visibility = View.GONE
-                            Toasty.warning(
-                                context,
-                                "Data error, hubungi pengembang: $e",
-                                Toast.LENGTH_SHORT
-                            )
-                                .show()
-                            Log.d("logMaps", "Data error, hubungi pengembang: $e")
-                            e.printStackTrace()
-                        }
-                    },
-                    Response.ErrorListener { error ->
-                        loaderView.visibility = View.GONE
-                        Toasty.warning(
-                            context,
-                            "Terjadi kesalahan koneksi: $error",
-                            Toast.LENGTH_SHORT
-                        )
-                            .show()
-                        Log.d("logMaps", "Terjadi kesalahan koneksi: $error")
-                    }) {
-                    override fun getParams(): Map<String, String> {
-                        val params: MutableMap<String, String> =
-                            java.util.HashMap()
-                        params["reg"] = prefManager.idReg.toString()
-                        return params
-                    }
-                }
-            Volley.newRequestQueue(context).add(strReq)
         } else {
             AlertDialogUtility.alertDialog(
                 context,
@@ -1021,7 +689,7 @@ class UpdateMan {
                             if (fDeleteDBC.exists()) {
                                 fDeleteDBC.delete()
                             }
-                            Toasty.success(context, "Data sudah paling update").show()
+                            Toasty.success(context, "Data sudah is up to date!").show()
                         } else if (cacheCheck != mainCheck) {
                             Log.d("cek", "BEDA")
                             val fDeleteDBC =

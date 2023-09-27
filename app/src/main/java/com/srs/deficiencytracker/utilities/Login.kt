@@ -262,8 +262,16 @@ class Login : AppCompatActivity() {
         if (prefManager.name == null || prefManager.name == "") { //misal prefmanager name kosong diisi
             prefManager.name = etUser.text.toString()
         } else {
-            val intent = Intent(this@Login, MainActivity::class.java)
-            startActivity(intent)
+            if (prefManager.idReg.toString().isEmpty() || prefManager.dataReg == "") {
+                val intent = Intent(this@Login, QcReg::class.java)
+                startActivity(intent)
+            } else if (prefManager.estYellow == null) {
+                val intent = Intent(this@Login, ChecklistEstate::class.java)
+                startActivity(intent)
+            } else {
+                val intent = Intent(this@Login, MainActivity::class.java)
+                startActivity(intent)
+            }
         }
     }
 

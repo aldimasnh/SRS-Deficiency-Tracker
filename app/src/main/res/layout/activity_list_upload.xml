@@ -87,6 +87,7 @@
                 android:orientation="horizontal">
 
                 <include
+                    android:id="@+id/llHeaderListUpload"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     layout="@layout/layout_list_header"/>
@@ -136,89 +137,18 @@
         app:sdMainFabOpenedBackgroundColor="@color/low" />
 
     <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/pb_holder_list_upload"
+        android:id="@+id/clLayoutUpload"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="@color/white"
         android:elevation="20dp"
         android:visibility="gone">
 
-        <com.airbnb.lottie.LottieAnimationView
-            android:id="@+id/lt_list_upload"
+        <include
+            android:id="@+id/loadingUpload"
+            layout="@layout/loading_file_layout"
+            android:elevation="20dp"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_centerInParent="true"
-            android:background="@color/white" />
-
-        <ProgressBar
-            android:id="@+id/progressBarUploadPk"
-            style="@style/Widget.AppCompat.ProgressBar.Horizontal"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_alignParentTop="true"
-            android:layout_marginStart="24dp"
-            android:layout_marginEnd="24dp"
-            android:progressTint="@color/colorPrimaryDark"
-            app:layout_constraintBottom_toTopOf="@+id/tv_hint_loading_upload_pk"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent" />
-
-        <TextView
-            android:id="@+id/tvProgressUploadPk"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="24dp"
-            android:layout_marginEnd="24dp"
-            android:textAlignment="center"
-            app:layout_constraintBottom_toTopOf="@+id/progressBarUploadPk"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_centerInParent="true"
-            android:orientation="horizontal"
-            android:weightSum="4"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent">
-
-            <View
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1.5" />
-
-            <ImageView
-                android:id="@+id/logo_ssms_upload_pk"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1" />
-
-            <View
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1.5" />
-
-        </LinearLayout>
-
-        <TextView
-            android:id="@+id/tv_hint_loading_upload_pk"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="32dp"
-            android:layout_marginTop="130dp"
-            android:layout_marginEnd="32dp"
-            android:paddingLeft="20dp"
-            android:paddingRight="20dp"
-            android:text="Mohon ditunggu, sedang memproses"
-            android:textAlignment="center"
-            android:textSize="20sp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
-
+            android:layout_height="wrap_content"/>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

@@ -19,14 +19,23 @@ import kotlinx.android.synthetic.main.activity_checklist_est.checkboxContainerEs
 import kotlinx.android.synthetic.main.activity_checklist_est.loadingCheckEst
 import kotlinx.android.synthetic.main.activity_checklist_est.lottieCbEst
 import kotlinx.android.synthetic.main.activity_checklist_est.progressBarCheckEst
+import kotlinx.android.synthetic.main.activity_main.loadingMain
 import org.json.JSONException
 import org.json.JSONObject
 
 class ChecklistEstate : AppCompatActivity() {
 
+    private var getSync = ""
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_checklist_est)
+
+        getSync = try {
+            intent.getStringExtra("sync")!!
+        } catch (e: Exception) {
+            ""
+        }
 
         val urlCategory = PrefManager(this).dataReg!!
 
@@ -44,7 +53,6 @@ class ChecklistEstate : AppCompatActivity() {
                     val jObj = JSONObject(response)
                     val success = jObj.getInt("status")
                     if (success == 1) {
-
                         val dataListEstArray = jObj.getJSONArray("listEst")
 
                         val estArray = ArrayList<String>()
@@ -57,9 +65,14 @@ class ChecklistEstate : AppCompatActivity() {
 
                         val marginBetweenCheckboxes =
                             resources.getDimensionPixelSize(R.dimen.checkbox_margin)
+                        val estYellowValues = prefManager.estYellow?.split(",")?.map { it.trim() } ?: emptyList()
                         for (text in estArray) {
                             val checkBox = MaterialCheckBox(this)
                             checkBox.text = text
+
+                            if (estYellowValues.contains(checkBox.text.toString())) {
+                                checkBox.isChecked = true
+                            }
 
                             val layoutParams = LinearLayout.LayoutParams(
                                 LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -90,15 +103,18 @@ class ChecklistEstate : AppCompatActivity() {
                                 prefManager.estYellow = fixSelected
 
                                 val intent = Intent(this, MainActivity::class.java)
-                                UpdateMan().loadFile(
-                                    intent,
-                                    urlCategory,
-                                    prefManager.idReg.toString(),
-                                    fixSelected,
-                                    this@ChecklistEstate,
-                                    loadingCheckEst,
-                                    "download"
-                                )
+                                if (getSync == "yes") {
+                                    UpdateMan().checkUpdateYellow(intent, this, loadingCheckEst)
+                                } else {
+                                    UpdateMan().loadFile(
+                                        intent,
+                                        urlCategory,
+                                        fixSelected,
+                                        this@ChecklistEstate,
+                                        loadingCheckEst,
+                                        "download"
+                                    )
+                                }
                             } else {
                                 Toasty.warning(this, "Ceklist data estate terlebih dahulu!!").show()
                             }
@@ -117,8 +133,14 @@ class ChecklistEstate : AppCompatActivity() {
                 }
             },
             Response.ErrorListener {
+                AlertDialogUtility.withSingleAction(
+                    this, "Ulang", "Terjadi kesalahan koneksi", "warning.json"
+                ) {
+                    val intent = Intent(this, ChecklistEstate::class.java)
+                    startActivity(intent)
+                }
+
                 progressBarCheckEst.visibility = View.GONE
-                Toasty.error(this, "Terjadi kesalahan koneksi", Toast.LENGTH_LONG).show()
             }
         ) {
             override fun getParams(): Map<String, String> {
@@ -133,6 +155,20 @@ class ChecklistEstate : AppCompatActivity() {
     }
 
     override fun onBackPressed() {
-        Toasty.warning(this, "Simpan data terlebih dahulu!!").show()
+        if (PrefManager(this).estYellow == null) {
+            Toasty.warning(this, "Simpan data terlebih dahulu!!").show()
+        } else {
+            AlertDialogUtility.withTwoActions(
+                this,
+                "Batal",
+                "Ya",
+                "Apakah anda yakin untuk keluar?",
+                "warning.json"
+            ) {
+                val intent = Intent(this, MainActivity::class.java)
+                startActivity(intent)
+                finishAffinity()
+            }
+        }
     }
 }

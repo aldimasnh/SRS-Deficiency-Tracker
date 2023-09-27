@@ -17,7 +17,7 @@ import com.srs.deficiencytracker.utilities.PrefManager
 
 open class WebViewActivity : AppCompatActivity() {
     private lateinit var webView: WebView
-    private val urlDashboardDT = "https://smart-app.srs-ssms.com/"
+    private val urlDashboardDT = "https://dtracker.srs-ssms.com/"
 
     @SuppressLint("SetTextI18n", "MissingInflatedId")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -87,7 +87,7 @@ open class WebViewActivity : AppCompatActivity() {
         val password = PrefManager(this).password!!
 
         val js = "javascript:(function(){" +
-                "document.getElementById('email').value = '$email';" +
+                "document.getElementById('email_or_nama_lengkap').value = '$email';" +
                 "document.getElementById('password').value = '$password';" +
                 "document.getElementById('loginButton').click();" +
                 "})()"

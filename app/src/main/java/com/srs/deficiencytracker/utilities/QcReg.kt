@@ -107,7 +107,7 @@ class QcReg : AppCompatActivity() {
                     AlertDialogUtility.withSingleAction(
                         this, "Ulang", "Data error, hubungi pengembang: $e", "warning.json"
                     ) {
-                        val intent = Intent(this, ChecklistEstate::class.java)
+                        val intent = Intent(this, QcReg::class.java)
                         startActivity(intent)
                     }
 
@@ -116,8 +116,14 @@ class QcReg : AppCompatActivity() {
                 }
             },
             Response.ErrorListener {
+                AlertDialogUtility.withSingleAction(
+                    this, "Ulang", "Terjadi kesalahan koneksi", "warning.json"
+                ) {
+                    val intent = Intent(this, QcReg::class.java)
+                    startActivity(intent)
+                }
+
                 progressBarQCReg.visibility = View.GONE
-                Toasty.error(this, "Terjadi kesalahan koneksi", Toast.LENGTH_LONG).show()
             }
         ) {
 

@@ -5,30 +5,25 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.util.Log
 import android.view.View
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
-import com.bumptech.glide.Glide
 import com.karumi.dexter.Dexter
 import com.karumi.dexter.MultiplePermissionsReport
 import com.karumi.dexter.PermissionToken
 import com.karumi.dexter.listener.PermissionRequest
 import com.karumi.dexter.listener.multi.MultiplePermissionsListener
 import com.srs.deficiencytracker.activity.FormMapsActivity
-import com.srs.deficiencytracker.activity.MapsActivity
 import com.srs.deficiencytracker.activity.PkKuningListActivity
 import com.srs.deficiencytracker.activity.WebViewActivity
 import com.srs.deficiencytracker.database.PemupukanSQL
 import com.srs.deficiencytracker.utilities.AlertDialogUtility
+import com.srs.deficiencytracker.utilities.ChecklistEstate
 import com.srs.deficiencytracker.utilities.Login
 import com.srs.deficiencytracker.utilities.PrefManager
+import com.srs.deficiencytracker.utilities.PrefManagerEstate
 import com.srs.deficiencytracker.utilities.UpdateMan
-import es.dmoral.toasty.Toasty
-import kotlinx.android.synthetic.main.activity_login.logo_ssms
-import kotlinx.android.synthetic.main.activity_login.lottie
 import kotlinx.android.synthetic.main.activity_main.dashboardAndIdk
 import kotlinx.android.synthetic.main.activity_main.loadingMain
 import kotlinx.android.synthetic.main.activity_main.mapsAndPkKuning
@@ -45,8 +40,6 @@ import kotlinx.android.synthetic.main.icon_grid.view.leftIconTap
 import kotlinx.android.synthetic.main.icon_grid.view.rightIconDescription
 import kotlinx.android.synthetic.main.icon_grid.view.rightIconSrc
 import kotlinx.android.synthetic.main.icon_grid.view.rightIconTap
-import kotlinx.android.synthetic.main.loading_file_layout.view.logoFileLoader
-import kotlinx.android.synthetic.main.loading_file_layout.view.lottieFileLoader
 import java.io.File
 
 class MainActivity : AppCompatActivity() {
@@ -84,17 +77,14 @@ class MainActivity : AppCompatActivity() {
         }
         treeAndBlok.leftIconTap.setOnClickListener {
             if (PemupukanSQL(this).setRecordPkKuning().toInt() > 0) {
-                AlertDialogUtility.withTwoActions(
+                AlertDialogUtility.alertDialog(
                     this,
-                    "Batal",
-                    "Perbarui",
-                    "Ada data yang belum terupload.\nYakin ingin memperbarui?",
+                    "Ada data yang belum terupload.\nSilahkan upload atau hapus data terlebih dahulu!!",
                     "warning.json"
-                ) {
-                    UpdateMan().checkUpdateYellow(this, loadingMain)
-                }
+                )
             } else {
-                UpdateMan().checkUpdateYellow(this, loadingMain)
+                val intent = Intent(this, ChecklistEstate::class.java).putExtra("sync", "yes")
+                startActivity(intent)
             }
         }
         treeAndBlok.rightIconTap.setOnClickListener {
@@ -149,6 +139,21 @@ class MainActivity : AppCompatActivity() {
                 prefManager.dataReg = null
                 prefManager.version = 0
                 prefManager.versionQC = 0
+                prefManager.idReg = 0
+                prefManager.login = 0
+                prefManager.hexMaps = null
+                prefManager.hexPk = null
+                prefManager.estYellow = null
+
+                val prefManagerEst =
+                    PrefManagerEstate(this)
+                prefManagerEst.status = null
+                prefManagerEst.luas = null
+                prefManagerEst.sph = 0
+                prefManagerEst.estate = null
+                prefManagerEst.blok = null
+                prefManagerEst.blokPlot = null
+                prefManagerEst.afdeling = null
 
                 //clear database
                 PemupukanSQL(this).deleteDb()

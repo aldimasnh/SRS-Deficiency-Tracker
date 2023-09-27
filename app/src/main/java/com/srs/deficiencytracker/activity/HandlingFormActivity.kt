@@ -372,50 +372,16 @@ open class HandlingFormActivity : AppCompatActivity() {
                                                 val objMaps = JSONObject(readMaps)
 
                                                 val estObjMaps = objMaps.getJSONObject(getEst)
-                                                if (getAfd.isEmpty()) {
-                                                    for (indexEst in estObjMaps.keys()) {
-                                                        var itemEst =
-                                                            estObjMaps.getJSONObject(indexEst)
-                                                        for (indexAfd in itemEst.keys()) {
-                                                            var itemAfd =
-                                                                itemEst.getJSONObject(indexAfd)
-                                                            for (index in itemAfd.keys()) {
-                                                                val item =
-                                                                    itemAfd.getJSONObject(index)
-                                                                if (getId == index) {
-                                                                    item.put("status", "Sudah")
-                                                                    fileMaps.writeText(objMaps.toString())
-                                                                }
-                                                            }
-                                                        }
-                                                    }
-                                                } else {
-                                                    val afdObjMaps =
-                                                        estObjMaps.getJSONObject(getAfd)
-                                                    if (getBlok.isEmpty()) {
-                                                        for (indexAfd in afdObjMaps.keys()) {
-                                                            var itemAfd =
-                                                                afdObjMaps.getJSONObject(indexAfd)
-                                                            for (index in itemAfd.keys()) {
-                                                                val item =
-                                                                    itemAfd.getJSONObject(index)
-                                                                if (getId == index) {
-                                                                    item.put("status", "Sudah")
-                                                                    fileMaps.writeText(objMaps.toString())
-                                                                }
-                                                            }
-                                                        }
-                                                    } else {
-                                                        val blokObjMaps =
-                                                            afdObjMaps.getJSONObject(getBlok)
-                                                        for (index in blokObjMaps.keys()) {
-                                                            val item =
-                                                                blokObjMaps.getJSONObject(index)
-                                                            if (getId == index) {
-                                                                item.put("status", "Sudah")
-                                                                fileMaps.writeText(objMaps.toString())
-                                                            }
-                                                        }
+                                                val afdObjMaps =
+                                                    estObjMaps.getJSONObject(getAfd)
+                                                val blokObjMaps =
+                                                    afdObjMaps.getJSONObject(getBlok)
+                                                for (index in blokObjMaps.keys()) {
+                                                    val item =
+                                                        blokObjMaps.getJSONObject(index)
+                                                    if (getId == index) {
+                                                        item.put("status", "Sudah")
+                                                        fileMaps.writeText(objMaps.toString())
                                                     }
                                                 }
 
