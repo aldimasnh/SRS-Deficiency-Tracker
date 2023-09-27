@@ -48,6 +48,7 @@ import com.srs.deficiencytracker.utilities.ModelMain
 import com.srs.deficiencytracker.utilities.PrefManager
 import de.mateware.snacky.Snacky
 import es.dmoral.toasty.Toasty
+import kotlinx.android.synthetic.main.activity_maps.cvCenterMaps
 import kotlinx.android.synthetic.main.activity_maps.cvFUMaps
 import kotlinx.android.synthetic.main.activity_maps.mapView
 import kotlinx.android.synthetic.main.activity_maps.tvAccuracyMaps
@@ -55,6 +56,7 @@ import kotlinx.android.synthetic.main.activity_maps.tvBlokMaps
 import kotlinx.android.synthetic.main.activity_maps.tvJarakMaps
 import kotlinx.android.synthetic.main.activity_maps.tvJmlPkMaps
 import kotlinx.android.synthetic.main.activity_maps.tvKondisiMaps
+import kotlinx.android.synthetic.main.activity_maps.tvPokokMaps
 import kotlinx.android.synthetic.main.activity_maps.tvStatusMaps
 import kotlinx.android.synthetic.main.activity_maps.tvTglFotoMaps
 import org.json.JSONObject
@@ -325,6 +327,20 @@ open class MapsActivity : AppCompatActivity() {
         }
         mapView.invalidate()
 
+        cvCenterMaps.setOnClickListener {
+            if (firstGPS) {
+                val geoPoint = GeoPoint(lat!!.toDouble(), lon!!.toDouble())
+                mapView.controller.animateTo(geoPoint)
+            } else {
+                Toasty.warning(
+                    this@MapsActivity,
+                    "Titik GPS belum didapatkan!",
+                    Toasty.LENGTH_LONG
+                )
+                    .show()
+            }
+        }
+
         getLocYellowTrees()
     }
 
@@ -434,7 +450,20 @@ open class MapsActivity : AppCompatActivity() {
     @SuppressLint("SetTextI18n", "ResourceType")
     private fun initMarker(modelList: List<ModelMain>) {
         runOnUiThread {
+            val arrBelum = ArrayList<Int>()
+            val arrSudah = ArrayList<Int>()
+            val markerIds = ArrayList<Int>()
+
+            for (j in modelList.indices) {
+                if (modelList[j].statusPk == "Sudah") {
+                    arrSudah.add(j)
+                } else {
+                    arrBelum.add(j)
+                }
+            }
+
             for (i in modelList.indices) {
+                var selectedIcon = ContextCompat.getDrawable(this, R.drawable.baseline_close_circle_24)
                 var drawable = ContextCompat.getDrawable(
                     this,
                     if (modelList[i].statusPk == "Sudah") R.drawable.baseline_circle_24 else R.drawable.ic_close
@@ -442,7 +471,7 @@ open class MapsActivity : AppCompatActivity() {
                 val color = ContextCompat.getColor(
                     this,
                     if (modelList[i].statusPk == "Sudah") {
-                        R.color.chart_blue4
+                        R.color.green1
                     } else if (modelList[i].kondisiPk == "Pucat") {
                         R.color.yellow1
                     } else if (modelList[i].kondisiPk == "Ringan") {
@@ -452,13 +481,19 @@ open class MapsActivity : AppCompatActivity() {
                     }
                 )
                 drawable?.setColorFilter(color, PorterDuff.Mode.SRC_ATOP)
+                selectedIcon?.setColorFilter(color, PorterDuff.Mode.SRC_ATOP)
+
+                val widthInPixels = if (modelList[i].statusPk == "Sudah") 50 else 100
+                val heightInPixels = if (modelList[i].statusPk == "Sudah") 50 else 100
+                val bitmap = Bitmap.createBitmap(widthInPixels, heightInPixels, Bitmap.Config.ARGB_8888)
+                val canvas = Canvas(bitmap)
+
+                selectedIcon?.setBounds(0, 0, widthInPixels, heightInPixels)
+                selectedIcon?.draw(canvas)
+                selectedIcon = BitmapDrawable(resources, bitmap)
 
                 // Resize icon status sudah ditangani
                 if (modelList[i].statusPk == "Sudah") {
-                    val widthInPixels = 50
-                    val heightInPixels = 50
-                    val bitmap = Bitmap.createBitmap(widthInPixels, heightInPixels, Bitmap.Config.ARGB_8888)
-                    val canvas = Canvas(bitmap)
                     drawable?.setBounds(0, 0, widthInPixels, heightInPixels)
                     drawable?.draw(canvas)
                     drawable = BitmapDrawable(resources, bitmap)
@@ -477,7 +512,7 @@ open class MapsActivity : AppCompatActivity() {
                         Locale.ENGLISH
                     ).parse(modelList[i].tglPk)!!
                 )
-                tvJmlPkMaps.text = modelList.size.toString()
+                tvJmlPkMaps.text = "${arrSudah.size}/${arrBelum.size}"
                 tvBlokMaps.text = if (getBlok.isNotEmpty()) getBlok else "-"
 
                 marker.setOnMarkerClickListener(object : Marker.OnMarkerClickListener {
@@ -486,7 +521,30 @@ open class MapsActivity : AppCompatActivity() {
                             lastClickedMarker?.closeInfoWindow()
                         }
 
+                        val markerId = modelList[i].idPk
+                        if (modelList[i].statusPk == "Belum") {
+                            if (markerIds.size < 20 || markerIds.contains(markerId)) {
+                                if (markerIds.contains(markerId)) {
+                                    markerIds.remove(markerId)
+                                    marker.icon = drawable
+                                } else {
+                                    if (markerIds.size == 20) {
+                                        markerIds.remove(markerId)
+                                        marker.icon = drawable
+                                    }
+                                    markerIds.add(markerId)
+                                    marker.icon = selectedIcon
+                                }
+                                marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+                            } else {
+                                Toasty.warning(this@MapsActivity, "Maksimal hanya dapat menangani 20 titik!").show()
+                            }
+                        }
+
+                        Log.d("cekData", markerIds.toTypedArray().contentToString())
+
                         lastClickedMarker = marker
+                        tvPokokMaps.text = "${markerIds.size}/20"
                         tvBlokMaps.text = modelList[i].blokPk
                         tvKondisiMaps.text = modelList[i].kondisiPk
                         tvStatusMaps.text = modelList[i].statusPk + " ditangani"
@@ -500,28 +558,12 @@ open class MapsActivity : AppCompatActivity() {
                         cvFUMaps.visibility = if (modelList[i].statusPk == "Belum") View.VISIBLE else View.GONE
                         cvFUMaps.setOnClickListener {
                             if (firstGPS) {
-                                if (fixAccuracy > 10 || accuracyRange > 21) {
-                                    AlertDialogUtility.withTwoActions(
+                                if (fixAccuracy > 10 || accuracyRange > 25) {
+                                    AlertDialogUtility.alertDialog(
                                         this@MapsActivity,
-                                        "BATAL",
-                                        "LANJUT",
-                                        "GPS belum memenuhi syarat.\nLanjut memulai pemupukan?",
+                                        "GPS belum memenuhi syarat!",
                                         "warning.json"
-                                    ) {
-                                        val intent =
-                                            Intent(
-                                                this@MapsActivity,
-                                                HandlingFormActivity::class.java
-                                            )
-                                                .putExtra("id", modelList[i].idPk.toString())
-                                                .putExtra("est", getEst)
-                                                .putExtra("afd", modelList[i].afdPk)
-                                                .putExtra("blok", modelList[i].blokPk)
-                                                .putExtra("kondisi", modelList[i].kondisiPk)
-                                                .putExtra("gps", "GL")
-                                        startActivity(intent)
-                                        finishAffinity()
-                                    }
+                                    )
                                 } else {
                                     val intent =
                                         Intent(
@@ -856,7 +898,7 @@ open class MapsActivity : AppCompatActivity() {
         }
 
         var originalDrawable = ContextCompat.getDrawable(this, R.drawable.baseline_navigation_24)
-        val color = ContextCompat.getColor(this, R.color.colorPrimaryDark)
+        val color = ContextCompat.getColor(this, R.color.blue1)
         originalDrawable?.let {
             DrawableCompat.setTint(it, color)
         }
@@ -893,7 +935,7 @@ open class MapsActivity : AppCompatActivity() {
                 GeoPoint(lat!!.toDouble(), lon!!.toDouble()))
             accuracyRange = rangeM
             tvJarakMaps.text = rangeKm
-            if (accuracyRange > 21) {
+            if (accuracyRange > 25) {
                 tvJarakMaps.setTextColor(Color.RED)
             } else {
                 tvJarakMaps.setTextColor(

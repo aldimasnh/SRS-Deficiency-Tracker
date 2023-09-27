@@ -25,4 +25,8 @@
     <color name="colorGreen_A400">#00E676</color>
     <color name="dashboard">#FB8C00</color>
     <color name="yellow1">#FFD73B</color>
+
+    <color name="blue1">#1976D2</color>
+    <color name="green1">#4CAF50</color>
+
 </resources>

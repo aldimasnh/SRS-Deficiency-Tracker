@@ -71,14 +71,14 @@
                         android:fontFamily="@font/segoeuil"
                         android:text="Foto :"
                         android:textColor="@color/black"
-                        android:textStyle="italic"
-                        android:textSize="12dp" />
+                        android:textSize="12dp"
+                        android:textStyle="italic" />
 
                     <TextView
-                        android:layout_marginTop="-3dp"
                         android:id="@+id/tvTglFotoMaps"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:layout_marginTop="-3dp"
                         android:fontFamily="@font/seguisb"
                         android:text="-"
                         android:textColor="@color/black"
@@ -129,14 +129,14 @@
                         android:fontFamily="@font/segoeuil"
                         android:text="Blok :"
                         android:textColor="@color/black"
-                        android:textStyle="italic"
-                        android:textSize="12dp" />
+                        android:textSize="12dp"
+                        android:textStyle="italic" />
 
                     <TextView
-                        android:layout_marginTop="-3dp"
                         android:id="@+id/tvBlokMaps"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:layout_marginTop="-3dp"
                         android:fontFamily="@font/seguisb"
                         android:text="-"
                         android:textColor="@color/black"
@@ -187,14 +187,14 @@
                         android:fontFamily="@font/segoeuil"
                         android:text="Total :"
                         android:textColor="@color/black"
-                        android:textStyle="italic"
-                        android:textSize="12dp" />
+                        android:textSize="12dp"
+                        android:textStyle="italic" />
 
                     <TextView
-                        android:layout_marginTop="-3dp"
                         android:id="@+id/tvJmlPkMaps"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:layout_marginTop="-3dp"
                         android:fontFamily="@font/seguisb"
                         android:text="-"
                         android:textColor="@color/black"
@@ -209,62 +209,121 @@
     </androidx.cardview.widget.CardView>
 
     <LinearLayout
-        android:id="@+id/llButtonFu"
-        android:layout_marginLeft="20dp"
-        android:layout_marginRight="20dp"
+        android:id="@+id/llAccuracy"
         android:layout_width="match_parent"
-        android:layout_height="70dp"
+        android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
+        android:layout_marginHorizontal="20dp"
+        android:layout_marginBottom="5dp"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintBottom_toTopOf="@id/cvCardBottom"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent">
+        app:layout_constraintEnd_toEndOf="parent">
 
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:orientation="vertical"
             android:layout_weight="1"
-            android:gravity="bottom">
+            android:weightSum="2"
+            android:gravity="center_vertical"
+            android:orientation="vertical">
 
-            <androidx.cardview.widget.CardView
+            <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="2dp"
-                android:layout_marginBottom="7dp"
-                android:backgroundTint="@color/white"
-                app:cardCornerRadius="20dp"
-                app:cardElevation="2dp">
+                android:layout_height="match_parent"
+                android:gravity="bottom"
+                android:layout_weight="1"
+                android:orientation="vertical">
 
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="match_parent"
-                    android:layout_marginStart="10dp"
-                    android:orientation="horizontal"
-                    android:layout_weight="1"
-                    android:gravity="center">
+                <androidx.cardview.widget.CardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="2dp"
+                    android:layout_marginBottom="7dp"
+                    android:backgroundTint="@color/white"
+                    app:cardCornerRadius="20dp"
+                    app:cardElevation="2dp">
 
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="@font/segoeuil"
-                        android:text="Akurasi : "
-                        android:textColor="@color/black"
-                        android:textStyle="italic"
-                        android:textSize="12dp" />
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="match_parent"
+                        android:layout_marginStart="10dp"
+                        android:layout_weight="1"
+                        android:gravity="center"
+                        android:orientation="horizontal">
 
-                    <TextView
-                        android:id="@+id/tvAccuracyMaps"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="@font/seguisb"
-                        android:text="-"
-                        android:textStyle="bold"
-                        android:textColor="@color/colorRed_A400"
-                        android:textSize="13dp" />
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/segoeuil"
+                            android:text="Pokok : "
+                            android:textColor="@color/black"
+                            android:textSize="12dp"
+                            android:textStyle="italic" />
 
-                </LinearLayout>
+                        <TextView
+                            android:id="@+id/tvPokokMaps"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/seguisb"
+                            android:text="-"
+                            android:textColor="@color/black"
+                            android:textSize="13dp"
+                            android:textStyle="bold" />
 
-            </androidx.cardview.widget.CardView>
+                    </LinearLayout>
+
+                </androidx.cardview.widget.CardView>
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="bottom"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <androidx.cardview.widget.CardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="2dp"
+                    android:layout_marginBottom="7dp"
+                    android:backgroundTint="@color/white"
+                    app:cardCornerRadius="20dp"
+                    app:cardElevation="2dp">
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="match_parent"
+                        android:layout_marginStart="10dp"
+                        android:layout_weight="1"
+                        android:gravity="center"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/segoeuil"
+                            android:text="Akurasi : "
+                            android:textColor="@color/black"
+                            android:textSize="12dp"
+                            android:textStyle="italic" />
+
+                        <TextView
+                            android:id="@+id/tvAccuracyMaps"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/seguisb"
+                            android:text="-"
+                            android:textColor="@color/colorRed_A400"
+                            android:textSize="13dp"
+                            android:textStyle="bold" />
+
+                    </LinearLayout>
+
+                </androidx.cardview.widget.CardView>
+
+            </LinearLayout>
 
         </LinearLayout>
 
@@ -272,9 +331,9 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_marginStart="15dp"
-            android:orientation="vertical"
             android:layout_weight="1"
-            android:gravity="bottom">
+            android:gravity="bottom"
+            android:orientation="vertical">
 
             <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
@@ -288,9 +347,9 @@
                     android:layout_width="wrap_content"
                     android:layout_height="match_parent"
                     android:layout_marginStart="10dp"
-                    android:orientation="horizontal"
                     android:layout_weight="1"
-                    android:gravity="center">
+                    android:gravity="center"
+                    android:orientation="horizontal">
 
                     <TextView
                         android:layout_width="match_parent"
@@ -298,8 +357,8 @@
                         android:fontFamily="@font/segoeuil"
                         android:text="Jarak : "
                         android:textColor="@color/black"
-                        android:textStyle="italic"
-                        android:textSize="12dp" />
+                        android:textSize="12dp"
+                        android:textStyle="italic" />
 
                     <TextView
                         android:id="@+id/tvJarakMaps"
@@ -307,9 +366,9 @@
                         android:layout_height="wrap_content"
                         android:fontFamily="@font/seguisb"
                         android:text="-"
-                        android:textStyle="bold"
                         android:textColor="@color/colorRed_A400"
-                        android:textSize="13dp" />
+                        android:textSize="13dp"
+                        android:textStyle="bold" />
 
                 </LinearLayout>
 
@@ -320,16 +379,15 @@
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:orientation="vertical"
             android:layout_weight="1"
-            android:gravity="right">
+            android:gravity="right"
+            android:orientation="vertical">
 
             <androidx.cardview.widget.CardView
                 android:id="@+id/cvFUMaps"
-                android:layout_marginBottom="5dp"
-                android:visibility="gone"
                 android:layout_width="60dp"
                 android:layout_height="60dp"
+                android:layout_marginBottom="5dp"
                 android:backgroundTint="@color/chart_blue4"
                 app:cardCornerRadius="50dp">
 
@@ -343,6 +401,51 @@
                         android:layout_width="30dp"
                         android:layout_height="30dp"
                         android:src="@drawable/baseline_content_paste_24"
+                        app:tint="@color/white" />
+
+                </LinearLayout>
+
+            </androidx.cardview.widget.CardView>
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_marginHorizontal="20dp"
+        android:layout_marginBottom="5dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/llAccuracy"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="right"
+            android:orientation="vertical">
+
+            <androidx.cardview.widget.CardView
+                android:id="@+id/cvCenterMaps"
+                android:layout_width="60dp"
+                android:layout_height="60dp"
+                android:layout_marginBottom="5dp"
+                android:backgroundTint="@color/chart_blue4"
+                app:cardCornerRadius="50dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:orientation="vertical">
+
+                    <ImageView
+                        android:layout_width="30dp"
+                        android:layout_height="30dp"
+                        android:src="@drawable/baseline_directions_walk_24"
                         app:tint="@color/white" />
 
                 </LinearLayout>
@@ -411,14 +514,14 @@
                         android:fontFamily="@font/segoeuil"
                         android:text="Kondisi :"
                         android:textColor="@color/black"
-                        android:textStyle="italic"
-                        android:textSize="12dp" />
+                        android:textSize="12dp"
+                        android:textStyle="italic" />
 
                     <TextView
-                        android:layout_marginTop="-3dp"
                         android:id="@+id/tvKondisiMaps"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:layout_marginTop="-3dp"
                         android:fontFamily="@font/seguisb"
                         android:text="-"
                         android:textColor="@color/black"
@@ -469,14 +572,14 @@
                         android:fontFamily="@font/segoeuil"
                         android:text="Status :"
                         android:textColor="@color/black"
-                        android:textStyle="italic"
-                        android:textSize="12dp" />
+                        android:textSize="12dp"
+                        android:textStyle="italic" />
 
                     <TextView
-                        android:layout_marginTop="-3dp"
                         android:id="@+id/tvStatusMaps"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:layout_marginTop="-3dp"
                         android:fontFamily="@font/seguisb"
                         android:text="-"
                         android:textColor="@color/black"
