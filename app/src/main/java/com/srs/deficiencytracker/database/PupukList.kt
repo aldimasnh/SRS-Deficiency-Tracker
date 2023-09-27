@@ -13,10 +13,5 @@ class ViewPkKuning(
     val db_blok: String,
     val db_status: String,
     val db_kondisi: String,
-    val db_datetime: String,
-    val db_jenisPupukID: String,
-    val db_dosisPupuk: String,
-    val db_metode: String,
-    val db_photo: String,
-    val db_komen: String,
+    val db_datetime: String
 )
