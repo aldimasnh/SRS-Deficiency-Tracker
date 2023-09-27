@@ -40,14 +40,12 @@ import com.srs.deficiencytracker.database.PemupukanSQL.Companion.db_app_ver
 import com.srs.deficiencytracker.database.PemupukanSQL.Companion.db_archive
 import com.srs.deficiencytracker.database.PemupukanSQL.Companion.db_blok
 import com.srs.deficiencytracker.database.PemupukanSQL.Companion.db_datetime
-import com.srs.deficiencytracker.database.PemupukanSQL.Companion.db_dosisPupuk
 import com.srs.deficiencytracker.database.PemupukanSQL.Companion.db_estate
 import com.srs.deficiencytracker.database.PemupukanSQL.Companion.db_id
 import com.srs.deficiencytracker.database.PemupukanSQL.Companion.db_idPk
 import com.srs.deficiencytracker.database.PemupukanSQL.Companion.db_jenisPupukID
 import com.srs.deficiencytracker.database.PemupukanSQL.Companion.db_komen
 import com.srs.deficiencytracker.database.PemupukanSQL.Companion.db_kondisi
-import com.srs.deficiencytracker.database.PemupukanSQL.Companion.db_metode
 import com.srs.deficiencytracker.database.PemupukanSQL.Companion.db_photo
 import com.srs.deficiencytracker.database.PemupukanSQL.Companion.db_status
 import com.srs.deficiencytracker.database.PemupukanSQL.Companion.db_tabPkKuning
@@ -112,8 +110,8 @@ class PkKuningListActivity : AppCompatActivity() {
     var shouldStop = false
     val handler = Handler()
     val delay = 5000
-    val timeOut = 600000
-    val runnableCode = object : Runnable {
+    private val timeOut = 600000
+    private val runnableCode = object : Runnable {
         override fun run() {
             if (shouldStop) {
                 return
@@ -179,7 +177,7 @@ class PkKuningListActivity : AppCompatActivity() {
             handler.postDelayed(this, delay.toLong())
         }
     }
-    val stopRunnable = Runnable {
+    private val stopRunnable = Runnable {
         if (!stoppedByConditions) {
             shouldStop = true
             uploading = false
@@ -210,7 +208,7 @@ class PkKuningListActivity : AppCompatActivity() {
         }
     }
 
-    val arrayMissPhoto = ArrayList<String>()
+    private val arrayMissPhoto = ArrayList<String>()
     val arrayCheckFoto = ArrayList<String>()
     val idArray = ArrayList<Int>()
     val idPkArray = ArrayList<Int>()
@@ -220,9 +218,9 @@ class PkKuningListActivity : AppCompatActivity() {
     val statusArray = ArrayList<String>()
     val kondisiArray = ArrayList<String>()
     val datetimeArray = ArrayList<String>()
-    val jenisPupukArray = ArrayList<Int>()
-    val dosisPupukArray = ArrayList<String>()
-    val metodeArray = ArrayList<String>()
+    val jenisPupukArray = ArrayList<String>()
+    private val dosisPupukArray = ArrayList<String>()
+    private val metodeArray = ArrayList<String>()
     val photoArray = ArrayList<String>()
     val komenArray = ArrayList<String>()
     val appVerArray = ArrayList<String>()
@@ -421,9 +419,7 @@ class PkKuningListActivity : AppCompatActivity() {
                     statusArray.add(getData(db_status, c))
                     kondisiArray.add(getData(db_kondisi, c))
                     datetimeArray.add(getData(db_datetime, c))
-                    jenisPupukArray.add(getData(db_jenisPupukID, c).toInt())
-                    dosisPupukArray.add(getData(db_dosisPupuk, c))
-                    metodeArray.add(getData(db_metode, c))
+                    jenisPupukArray.add(getData(db_jenisPupukID, c))
                     photoArray.add(getData(db_photo, c))
                     val arrayFoto =
                         getData(db_photo, c).split("$")
@@ -486,7 +482,7 @@ class PkKuningListActivity : AppCompatActivity() {
                 {
                     uploading = true
                     clLayoutUpload.visibility = View.VISIBLE
-                    arrayCheckFoto.removeAll(arrayMissPhoto)
+                    arrayCheckFoto.removeAll(arrayMissPhoto.toSet())
 
                     handler.postDelayed(runnableCode, delay.toLong())
                     handler.postDelayed(stopRunnable, timeOut.toLong())
@@ -527,9 +523,7 @@ class PkKuningListActivity : AppCompatActivity() {
         statusUp: String,
         kondisiUp: String,
         dateUp: String,
-        jenisPupukUp: Int,
-        dosisPupukUp: String,
-        metodeUp: String,
+        jenisPupukUp: String,
         photoUp: String,
         komenUp: String,
         appVerUp: String
@@ -592,9 +586,7 @@ class PkKuningListActivity : AppCompatActivity() {
                 params[db_status] = statusUp
                 params[db_kondisi] = kondisiUp
                 params[db_datetime] = dateUp
-                params[db_jenisPupukID] = jenisPupukUp.toString()
-                params[db_dosisPupuk] = dosisPupukUp
-                params[db_metode] = metodeUp
+                params[db_jenisPupukID] = jenisPupukUp
                 params[db_photo] = photoUp
                 params[db_komen] = komenUp
                 params[db_app_ver] = appVerUp
@@ -655,8 +647,6 @@ class PkKuningListActivity : AppCompatActivity() {
                                 kondisiUp = kondisiArray[i],
                                 dateUp = datetimeArray[i],
                                 jenisPupukUp = jenisPupukArray[i],
-                                dosisPupukUp = dosisPupukArray[i],
-                                metodeUp = metodeArray[i],
                                 photoUp = photoArray[i],
                                 komenUp = komenArray[i],
                                 appVerUp = appVerArray[i]
@@ -753,7 +743,7 @@ class PkKuningListActivity : AppCompatActivity() {
                             if (fDeleteDBC.exists()) {
                                 fDeleteDBC.delete()
                             }
-                        } else if (cacheCheck != mainCheck) {
+                        } else {
                             Log.d("cek", "BEDA")
                             val fDeleteDBC =
                                 File(getExternalFilesDir(null)?.absolutePath + "/CACHE/" + "header$urlCategory")
@@ -784,9 +774,9 @@ class PkKuningListActivity : AppCompatActivity() {
                                 if (fDelete.exists()) {
                                     fDelete.delete()
                                 }
-                                val filePath =
+                                val fileP =
                                     getExternalFilesDir(null)?.absolutePath + "/MAIN/"
-                                val f = File(filePath + urlCategory)
+                                val f = File(fileP + urlCategory)
                                 if ((!f.exists())) {
                                     clLayoutUpload.visibility = View.VISIBLE
                                     val config = PRDownloaderConfig.newBuilder()
@@ -802,7 +792,7 @@ class PkKuningListActivity : AppCompatActivity() {
                                         .toString() + "zip"
                                     Log.d("testzip", "zipfile: $zipFile || url: $url")
                                     val downloadId =
-                                        PRDownloader.download(url, filePath, zipFile)
+                                        PRDownloader.download(url, fileP, zipFile)
                                             .build()
                                             .setOnStartOrResumeListener { }
                                             .setOnPauseListener { }
@@ -828,12 +818,12 @@ class PkKuningListActivity : AppCompatActivity() {
                                                 override fun onDownloadComplete() {
                                                     try {
                                                         FileMan().unzip(
-                                                            filePath + zipFile,
-                                                            filePath
+                                                            fileP + zipFile,
+                                                            fileP
                                                         )
 
                                                     } finally {
-                                                        File(filePath + zipFile).delete()
+                                                        File(fileP + zipFile).delete()
                                                         clLayoutUpload.visibility = View.GONE
                                                     }
                                                 }

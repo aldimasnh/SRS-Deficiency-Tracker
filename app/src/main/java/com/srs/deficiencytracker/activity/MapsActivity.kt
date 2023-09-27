@@ -851,40 +851,46 @@ open class MapsActivity : AppCompatActivity() {
     }
 
     private fun updateMarkerPosition(newLat: Double, newLng: Double) {
-        currentMarker?.let {
-            mapView.overlays.remove(it)
-        }
-
-        var originalDrawable = ContextCompat.getDrawable(this, R.drawable.baseline_navigation_24)
-        val color = ContextCompat.getColor(this, R.color.colorPrimaryDark)
-        originalDrawable?.let {
-            DrawableCompat.setTint(it, color)
-        }
-
-        val widthInPixels = 100
-        val heightInPixels = 100
-        val bitmap = Bitmap.createBitmap(widthInPixels, heightInPixels, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bitmap)
-        originalDrawable?.setBounds(0, 0, widthInPixels, heightInPixels)
-        originalDrawable?.draw(canvas)
-        originalDrawable = BitmapDrawable(resources, bitmap)
-
-        val newMarker = Marker(mapView)
-        newMarker.icon = originalDrawable
-        newMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
-        newMarker.position = GeoPoint(newLat, newLng)
-        newMarker.rotation = 0f
-
-        newMarker.setOnMarkerClickListener(object : Marker.OnMarkerClickListener {
-            override fun onMarkerClick(marker: Marker, mapView: MapView): Boolean {
-                return true
+        try {
+            currentMarker?.let {
+                mapView.overlays.remove(it)
             }
-        })
 
-        mapView.overlays.add(newMarker)
-        currentMarker = newMarker
+            var originalDrawable = ContextCompat.getDrawable(this, R.drawable.baseline_navigation_24)
+            val color = ContextCompat.getColor(this, R.color.colorPrimaryDark)
+            originalDrawable?.let {
+                DrawableCompat.setTint(it, color)
+            }
 
-        mapView.invalidate()
+            val widthInPixels = 100
+            val heightInPixels = 100
+            val bitmap = Bitmap.createBitmap(widthInPixels, heightInPixels, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bitmap)
+            originalDrawable?.setBounds(0, 0, widthInPixels, heightInPixels)
+            originalDrawable?.draw(canvas)
+            originalDrawable = BitmapDrawable(resources, bitmap)
+
+            val newMarker = Marker(mapView)
+            newMarker.icon = originalDrawable
+            newMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+            newMarker.position = GeoPoint(newLat, newLng)
+            newMarker.rotation = 0f
+
+            newMarker.setOnMarkerClickListener(object : Marker.OnMarkerClickListener {
+                override fun onMarkerClick(marker: Marker, mapView: MapView): Boolean {
+                    return true
+                }
+            })
+
+            mapView.overlays.add(newMarker)
+            currentMarker = newMarker
+
+            mapView.invalidate()
+        }catch (e: Exception)
+        {
+            Toasty.error(this, "Error mapview:$e", Toasty.LENGTH_SHORT).show()
+        }
+
     }
 
     private fun rangePos() {

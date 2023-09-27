@@ -7,46 +7,32 @@ import android.content.Intent
 import android.content.res.ColorStateList
 import android.database.Cursor
 import android.database.sqlite.SQLiteException
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import android.graphics.Canvas
-import android.graphics.Color
-import android.graphics.ImageFormat
-import android.graphics.Matrix
-import android.graphics.Paint
-import android.graphics.SurfaceTexture
-import android.hardware.camera2.CameraCaptureSession
-import android.hardware.camera2.CameraCharacteristics
-import android.hardware.camera2.CameraDevice
-import android.hardware.camera2.CameraManager
-import android.hardware.camera2.CaptureRequest
+import android.graphics.*
+import android.hardware.camera2.*
 import android.media.ImageReader
 import android.net.Uri
-import android.os.Bundle
-import android.os.Environment
-import android.os.Handler
-import android.os.HandlerThread
-import android.os.Looper
+import android.os.*
+import android.text.Editable
+import android.text.TextWatcher
 import android.util.Log
 import android.util.Rational
 import android.util.Size
+import android.util.TypedValue
 import android.view.Surface
 import android.view.TextureView
 import android.view.View
-import android.view.ViewGroup
 import android.view.WindowManager
 import android.view.inputmethod.InputMethodManager
-import android.widget.RelativeLayout
-import android.widget.Toast
+import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.content.res.ResourcesCompat
-import androidx.core.widget.addTextChangedListener
 import androidx.exifinterface.media.ExifInterface
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.daimajia.androidanimations.library.Techniques
 import com.daimajia.androidanimations.library.YoYo
+import com.google.android.material.chip.Chip
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.jaredrummler.materialspinner.MaterialSpinner
 import com.leinardi.android.speeddial.SpeedDialActionItem
@@ -60,39 +46,19 @@ import com.srs.deficiencytracker.utilities.FileMan
 import com.srs.deficiencytracker.utilities.PrefManager
 import com.srs.deficiencytracker.utilities.PrefManagerEstate
 import es.dmoral.toasty.Toasty
-import kotlinx.android.synthetic.main.activity_camera.view.camApi
-import kotlinx.android.synthetic.main.activity_camera.view.captureCam
-import kotlinx.android.synthetic.main.activity_camera.view.torchButton
-import kotlinx.android.synthetic.main.activity_form_est.sp_est_form
-import kotlinx.android.synthetic.main.activity_foto_temuan.view.cvTemuan2
-import kotlinx.android.synthetic.main.activity_foto_temuan.view.et_komentar_temuan
-import kotlinx.android.synthetic.main.activity_foto_temuan.view.iv_temuan1
-import kotlinx.android.synthetic.main.activity_handling_form.et_dosis_hand
-import kotlinx.android.synthetic.main.activity_handling_form.header_hand
-import kotlinx.android.synthetic.main.activity_handling_form.lyCameraPupuk
-import kotlinx.android.synthetic.main.activity_handling_form.sdHandSaveUpload
-import kotlinx.android.synthetic.main.activity_handling_form.sp_jenis_hand
-import kotlinx.android.synthetic.main.activity_handling_form.sp_metode_hand
-import kotlinx.android.synthetic.main.activity_handling_form.svMainPupuk
-import kotlinx.android.synthetic.main.activity_handling_form.temuanPupuk
-import kotlinx.android.synthetic.main.activity_handling_form.zoomPupuk
-import kotlinx.android.synthetic.main.header_form.tv_update_header_gudang
-import kotlinx.android.synthetic.main.header_form.tv_ver_app_header_gudang
-import kotlinx.android.synthetic.main.header_form.view.icLocationHeader
-import kotlinx.android.synthetic.main.header_form.view.ic_gudang_wh
-import kotlinx.android.synthetic.main.header_form.view.tv_gudang_main
-import kotlinx.android.synthetic.main.zoom_foto_layout.view.closeZoom
-import kotlinx.android.synthetic.main.zoom_foto_layout.view.deletePhoto
-import kotlinx.android.synthetic.main.zoom_foto_layout.view.fotoZoom
-import kotlinx.android.synthetic.main.zoom_foto_layout.view.retakePhoto
+import kotlinx.android.synthetic.main.activity_camera.view.*
+import kotlinx.android.synthetic.main.activity_foto_temuan.view.*
+import kotlinx.android.synthetic.main.activity_handling_form.*
+import kotlinx.android.synthetic.main.header_form.*
+import kotlinx.android.synthetic.main.header_form.view.*
+import kotlinx.android.synthetic.main.zoom_foto_layout.view.*
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 import java.text.SimpleDateFormat
-import java.util.Calendar
-import java.util.Locale
+import java.util.*
 
 open class HandlingFormActivity : AppCompatActivity() {
 
@@ -104,12 +70,12 @@ open class HandlingFormActivity : AppCompatActivity() {
     private var getGPS = ""
     private var posPhoto = false
 
-    private var pupukArray = ArrayList<String>()
-    private var pupukIdArray = ArrayList<Int>()
+    private var perlakuanArray = ArrayList<String>()
+    private var perlakuanIdArray = ArrayList<Int>()
 
-    private var jenisPupukId = 0
-    private var metode = ""
-    private var dosisPupuk = ""
+    private var selectedPerlakuanArray = ArrayList<String>()
+    private var selectedPerlakuanIdArray = ArrayList<Int>()
+
     private var komen = ""
     private var komenResult = ""
 
@@ -162,11 +128,11 @@ open class HandlingFormActivity : AppCompatActivity() {
 
         getListPupuk()
         header_hand.icLocationHeader.visibility = View.GONE
-        header_hand.tv_gudang_main.text = "PENANGANAN"
+        header_hand.tv_gudang_main.text = "Action"
         header_hand.ic_gudang_wh.setImageResource(R.drawable.baseline_content_paste_24)
         setSpeedDial()
 
-        var urlCategory = PrefManager(this).dataReg!!
+        val urlCategory = PrefManager(this).dataReg!!
         JSONObject(
             FileMan().onlineInputStream(
                 urlCategory,
@@ -177,29 +143,6 @@ open class HandlingFormActivity : AppCompatActivity() {
         )
 
         hide(sp_jenis_hand)
-        hide(sp_metode_hand)
-
-        sp_jenis_hand.setItems(pupukArray)
-        sp_jenis_hand.text = "Pilih Jenis Pupuk"
-        sp_jenis_hand.setOnItemSelectedListener { view, position, id, item ->
-            jenisPupukId = pupukIdArray[position]
-        }
-
-        val metodeArray = arrayListOf("Tanam", "Sebar")
-        sp_metode_hand.setItems(metodeArray)
-        sp_metode_hand.text = "Pilih Metode"
-
-        sp_metode_hand.setOnItemSelectedListener { view, position, id, item ->
-            metode = item.toString()
-        }
-
-        et_dosis_hand.addTextChangedListener {
-            dosisPupuk = try {
-                et_dosis_hand.text.toString()
-            } catch (e: Exception) {
-                "0"
-            }
-        }
 
         temuanPupuk.iv_temuan1.setOnClickListener {
             if (fotoArray.size >= 1) {
@@ -238,6 +181,66 @@ open class HandlingFormActivity : AppCompatActivity() {
         zoomPupuk.closeZoom.setOnClickListener {
             closeZoom()
         }
+
+        val searchEditText: EditText = findViewById(R.id.searchEditText)
+        val adapter: ArrayAdapter<String> = ArrayAdapter(this, android.R.layout.simple_spinner_item, perlakuanArray)
+        sp_jenis_hand.setAdapter(adapter)
+
+        sp_jenis_hand.setOnItemSelectedListener { view, position, id, item ->
+            if (selectedPerlakuanArray.contains(item)) {
+                Toasty.error(this, "$item telah masuk ke dalam rekomendasi", Toasty.LENGTH_SHORT)
+                    .show()
+            }else{
+                for (i in perlakuanArray.indices) {
+                    if (item == perlakuanArray[i] && !selectedPerlakuanArray.contains(perlakuanArray[i])){
+                        selectedPerlakuanArray.add(perlakuanArray[i])
+                        selectedPerlakuanIdArray.add(perlakuanIdArray[i])
+
+                        val chip = Chip(this)
+                        val paddingDp = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 10f, resources.displayMetrics).toInt()
+                        chip.setPadding(paddingDp, paddingDp, paddingDp, paddingDp)
+                        chip.text = perlakuanArray[i]
+                        chip.setCloseIconResource(com.google.android.material.R.drawable.abc_ic_clear_material)
+                        chip.setCloseIconTintResource(R.color.colorRed_A400)
+                        chip.setChipIconResource(R.drawable.ic_baseline_add_circle_24)
+                        chip.setChipIconTintResource(R.color.ssmsPantone)
+                        chip.isCloseIconEnabled = true
+                        chip.setOnCloseIconClickListener {
+                            val chipText = chip.text.toString()
+                            for (z in selectedPerlakuanArray.indices){
+                                if ( chipText == selectedPerlakuanArray[z]) {
+                                    selectedPerlakuanArray.removeAt(z)
+                                    selectedPerlakuanIdArray.removeAt(z)
+                                    adapter.notifyDataSetChanged()
+                                    sp_jenis_hand.setAdapter(adapter)
+                                    break
+                                }
+                            }
+                            chip_hand.removeView(chip)
+                        }
+                        chip_hand.addView(chip)
+                        adapter.notifyDataSetChanged()
+                        sp_jenis_hand.setAdapter(adapter)
+                        break
+                    }
+                }
+            }
+        }
+
+        // Add a TextWatcher to filter the data based on the search input
+        searchEditText.addTextChangedListener(object : TextWatcher {
+            override fun afterTextChanged(s: Editable?) {}
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                adapter.filter.filter(s)
+                try {
+                    sp_jenis_hand.text = adapter.getItem(0)
+                }catch (e: Exception){
+                    sp_jenis_hand.text = perlakuanArray[0]
+                }
+            }
+        })
     }
 
     private fun closeZoom() {
@@ -311,8 +314,7 @@ open class HandlingFormActivity : AppCompatActivity() {
                                 }
                             }
                         } else {
-                            if (sp_jenis_hand.text == "Pilih Jenis Pupuk" || et_dosis_hand.text.toString()
-                                    .isEmpty() || sp_metode_hand.text == "Pilih Metode" || fotoArray.isEmpty()
+                            if (sp_jenis_hand.text == "Pilih Jenis Pupuk" || fotoArray.isEmpty()
                             ) {
                                 AlertDialogUtility.alertDialog(
                                     this,
@@ -332,7 +334,7 @@ open class HandlingFormActivity : AppCompatActivity() {
                                         komen = komArray.toTypedArray().contentToString()
                                     }
 
-                                    var revKomen =
+                                    val revKomen =
                                         komen.replace("[", "").replace("]", "").split(",")
                                             .toTypedArray()
                                     for (i in revKomen.indices) {
@@ -352,13 +354,11 @@ open class HandlingFormActivity : AppCompatActivity() {
                                         datetime = SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(
                                             Calendar.getInstance().time
                                         ),
-                                        jenisPupukId = jenisPupukId,
-                                        dosisPupuk = dosisPupuk,
-                                        metodePupuk = metode,
+                                        jenisPupukId = selectedPerlakuanIdArray.toTypedArray().contentToString(),
                                         foto = fname.replace("[", "").replace("]", "")
                                             .replace(",", "$").replace(" ", ""),
                                         komen = komenResult,
-                                        app_ver = "${BuildConfig.VERSION_NAME};${android.os.Build.VERSION.RELEASE};${android.os.Build.MODEL};$getGPS"
+                                        app_ver = "${BuildConfig.VERSION_NAME};${Build.VERSION.RELEASE};${Build.MODEL};$getGPS"
                                     )
                                     if (status > -1) {
                                         val pkPath =
@@ -523,7 +523,7 @@ open class HandlingFormActivity : AppCompatActivity() {
 
     private fun addToGallery(photoFile: File) {
         val galleryIntent = Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE)
-        val f = photoFile!!
+        val f = photoFile
         val picUri = Uri.fromFile(f)
         galleryIntent.data = picUri
         this.sendBroadcast(galleryIntent)
@@ -704,7 +704,7 @@ open class HandlingFormActivity : AppCompatActivity() {
                         imageReader =
                             ImageReader.newInstance(size.width, size.height, ImageFormat.JPEG, 1)
                         imageReader!!.setOnImageAvailableListener({ p0 ->
-                            var image = p0?.acquireLatestImage()
+                            val image = p0?.acquireLatestImage()
                             var fileDCIM: File? = null
                             if (image != null) {
                                 var buffer = image.planes[0].buffer
@@ -752,7 +752,7 @@ open class HandlingFormActivity : AppCompatActivity() {
                                 Locale("id", "ID")
                             ).format(Calendar.getInstance().time) //nentuin tanggal dan jam
 
-                            var komentarEmp = temuanPupuk.et_komentar_temuan.text.toString()
+                            val komentarEmp = temuanPupuk.et_komentar_temuan.text.toString()
                             val watermarkedBitmap = addWatermark(
                                 bitmap,
                                 "POKOK KUNING/$getEst/$getAfd/$getBlok\n${
@@ -885,19 +885,19 @@ open class HandlingFormActivity : AppCompatActivity() {
         val selectQuery =
             "SELECT  * FROM ${PemupukanSQL.db_tabPupuk} ORDER BY ${PemupukanSQL.db_namaPupuk} ASC"
         val db = PemupukanSQL(this).readableDatabase
-        var i: Cursor?
+        val i: Cursor?
         try {
             i = db.rawQuery(selectQuery, null)
             if (i.moveToFirst()) {
                 do {
-                    pupukArray.add(
+                    perlakuanArray.add(
                         try {
                             i.getString(i.getColumnIndex(PemupukanSQL.db_namaPupuk))
                         } catch (e: Exception) {
                             ""
                         }
                     )
-                    pupukIdArray.add(
+                    perlakuanIdArray.add(
                         try {
                             i.getInt(i.getColumnIndex(PemupukanSQL.db_id))
                         } catch (e: Exception) {
