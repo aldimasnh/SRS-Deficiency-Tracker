@@ -91,7 +91,7 @@ class PkKuningListActivity : AppCompatActivity() {
 
     //upload
     private val urlCekFoto = "https://srs-ssms.com/deficiency_tracker/checkFotoTracker.php"
-    private val urlInsert = "https://srs-ssms.com/deficiency_tracker/postDataTracker.php"
+    private val urlInsert = "https://srs-ssms.com/deficiency_tracker/postDataTracker1.php"
     var serverURL: String = "https://srs-ssms.com/deficiency_tracker/recordFotoTracker.php"
     private val client = OkHttpClient()
 
@@ -219,8 +219,6 @@ class PkKuningListActivity : AppCompatActivity() {
     val kondisiArray = ArrayList<String>()
     val datetimeArray = ArrayList<String>()
     val jenisPupukArray = ArrayList<String>()
-    private val dosisPupukArray = ArrayList<String>()
-    private val metodeArray = ArrayList<String>()
     val photoArray = ArrayList<String>()
     val komenArray = ArrayList<String>()
     val appVerArray = ArrayList<String>()
@@ -399,8 +397,6 @@ class PkKuningListActivity : AppCompatActivity() {
         kondisiArray.clear()
         datetimeArray.clear()
         jenisPupukArray.clear()
-        dosisPupukArray.clear()
-        metodeArray.clear()
         photoArray.clear()
         komenArray.clear()
         val selectQuery =
@@ -425,7 +421,9 @@ class PkKuningListActivity : AppCompatActivity() {
                         getData(db_photo, c).split("$")
                     for (a in arrayFoto.indices) {
                         if (arrayFoto[a].isNotEmpty()) {
-                            arrayCheckFoto.add(arrayFoto[a])
+                            if (!arrayCheckFoto.contains(arrayFoto[a])) {
+                                arrayCheckFoto.add(arrayFoto[a])
+                            }
                         }
                     }
                     komenArray.add(getData(db_komen, c))
@@ -472,10 +470,8 @@ class PkKuningListActivity : AppCompatActivity() {
                             .replace("\"", "").replace(" ", ""),
                         "Harap mengambil foto ulang dan rename sesuai dengan pemberitahuan berikut.",
                         "",
-                        {
-                        },
-                        {
-                        },
+                        null,
+                        null,
                         true
                     )
                 },

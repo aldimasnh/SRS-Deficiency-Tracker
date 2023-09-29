@@ -45,12 +45,17 @@ import com.srs.deficiencytracker.utilities.AlertDialogUtility
 import com.srs.deficiencytracker.utilities.FileMan
 import com.srs.deficiencytracker.utilities.PrefManager
 import com.srs.deficiencytracker.utilities.PrefManagerEstate
+import com.srs.deficiencytracker.utilities.UpdateMan
 import es.dmoral.toasty.Toasty
 import kotlinx.android.synthetic.main.activity_camera.view.*
 import kotlinx.android.synthetic.main.activity_foto_temuan.view.*
 import kotlinx.android.synthetic.main.activity_handling_form.*
+import kotlinx.android.synthetic.main.activity_list_upload.clLayoutUpload
+import kotlinx.android.synthetic.main.activity_list_upload.loadingUpload
 import kotlinx.android.synthetic.main.header_form.*
 import kotlinx.android.synthetic.main.header_form.view.*
+import kotlinx.android.synthetic.main.loading_file_layout.view.logoFileLoader
+import kotlinx.android.synthetic.main.loading_file_layout.view.lottieFileLoader
 import kotlinx.android.synthetic.main.zoom_foto_layout.view.*
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
@@ -62,7 +67,7 @@ import java.util.*
 
 open class HandlingFormActivity : AppCompatActivity() {
 
-    private var getId = ""
+    private var getIdPk = ""
     private var getEst = ""
     private var getAfd = ""
     private var getBlok = ""
@@ -108,17 +113,39 @@ open class HandlingFormActivity : AppCompatActivity() {
     private var isCameraOpen = false
     private var isFlashlightOn = false
 
+    var inserting = false
+    val handling = Handler()
+    val delay = 1000
+    private val timeOut = 10000
+    private val runnableCode = object : Runnable {
+        override fun run() {
+            if (inserting) {
+                insertData()
+            } else {
+                handling.removeCallbacks(this)
+                clLayoutHand.visibility = View.GONE
+            }
+
+            handling.postDelayed(this, delay.toLong())
+        }
+    }
+    private val stopRunnable = Runnable {
+        handling.removeCallbacks(runnableCode)
+        clLayoutHand.visibility = View.GONE
+    }
+
     @SuppressLint("SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_handling_form)
 
-        getId = getDataIntent("id")
+        getIdPk = getDataIntent("id")
         getEst = getDataIntent("est")
         getAfd = getDataIntent("afd")
         getBlok = getDataIntent("blok")
         getCons = getDataIntent("kondisi")
         getGPS = getDataIntent("gps")
+        Log.d("cekData", getIdPk)
 
         rootDCIM = File(
             Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM),
@@ -126,9 +153,20 @@ open class HandlingFormActivity : AppCompatActivity() {
         ).toString()
         rootApp = getExternalFilesDir(Environment.DIRECTORY_PICTURES).toString()
 
+        Glide.with(this)//GLIDE LOGO FOR LOADING LAYOUT
+            .load(R.drawable.logo_png_white)
+            .into(loadingHand.logoFileLoader)
+        Glide.with(this)//GLIDE LOGO FOR LOADING LAYOUT
+            .load(R.drawable.ssms_green)
+            .into(loadingHand.logoFileLoader)
+        loadingHand.lottieFileLoader.setAnimation("loading_circle.json")//ANIMATION WITH LOTTIE FOR LOADING LAYOUT
+        @Suppress("DEPRECATION")
+        loadingHand.lottieFileLoader.loop(true)
+        loadingHand.lottieFileLoader.playAnimation()
+
         getListPupuk()
         header_hand.icLocationHeader.visibility = View.GONE
-        header_hand.tv_gudang_main.text = "Action"
+        header_hand.tv_gudang_main.text = "ACTION"
         header_hand.ic_gudang_wh.setImageResource(R.drawable.baseline_content_paste_24)
         setSpeedDial()
 
@@ -165,10 +203,10 @@ open class HandlingFormActivity : AppCompatActivity() {
                         .repeat(0)
                         .playOn(findViewById(R.id.zoomPupuk))
                 } else {
-                    if (temuanPupuk.et_komentar_temuan.text.toString().isNotEmpty()) {
+                    if (selectedPerlakuanArray.isNotEmpty()) {
                         initializeCameraCapture(imageCaptureCode1)
                     } else {
-                        Toasty.warning(this, "Tambahkan komentar terlebih dahulu!").show()
+                        Toasty.warning(this, "Tambahkan perlakuan terlebih dahulu!").show()
                     }
                 }
                 zoomPupuk.retakePhoto.setOnClickListener {
@@ -183,21 +221,26 @@ open class HandlingFormActivity : AppCompatActivity() {
         }
 
         val searchEditText: EditText = findViewById(R.id.searchEditText)
-        val adapter: ArrayAdapter<String> = ArrayAdapter(this, android.R.layout.simple_spinner_item, perlakuanArray)
+        val adapter: ArrayAdapter<String> =
+            ArrayAdapter(this, android.R.layout.simple_spinner_item, perlakuanArray)
         sp_jenis_hand.setAdapter(adapter)
 
         sp_jenis_hand.setOnItemSelectedListener { view, position, id, item ->
             if (selectedPerlakuanArray.contains(item)) {
                 Toasty.error(this, "$item telah masuk ke dalam rekomendasi", Toasty.LENGTH_SHORT)
                     .show()
-            }else{
+            } else {
                 for (i in perlakuanArray.indices) {
-                    if (item == perlakuanArray[i] && !selectedPerlakuanArray.contains(perlakuanArray[i])){
+                    if (item == perlakuanArray[i] && !selectedPerlakuanArray.contains(perlakuanArray[i])) {
                         selectedPerlakuanArray.add(perlakuanArray[i])
                         selectedPerlakuanIdArray.add(perlakuanIdArray[i])
 
                         val chip = Chip(this)
-                        val paddingDp = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 10f, resources.displayMetrics).toInt()
+                        val paddingDp = TypedValue.applyDimension(
+                            TypedValue.COMPLEX_UNIT_DIP,
+                            10f,
+                            resources.displayMetrics
+                        ).toInt()
                         chip.setPadding(paddingDp, paddingDp, paddingDp, paddingDp)
                         chip.text = perlakuanArray[i]
                         chip.setCloseIconResource(com.google.android.material.R.drawable.abc_ic_clear_material)
@@ -207,8 +250,8 @@ open class HandlingFormActivity : AppCompatActivity() {
                         chip.isCloseIconEnabled = true
                         chip.setOnCloseIconClickListener {
                             val chipText = chip.text.toString()
-                            for (z in selectedPerlakuanArray.indices){
-                                if ( chipText == selectedPerlakuanArray[z]) {
+                            for (z in selectedPerlakuanArray.indices) {
+                                if (chipText == selectedPerlakuanArray[z]) {
                                     selectedPerlakuanArray.removeAt(z)
                                     selectedPerlakuanIdArray.removeAt(z)
                                     adapter.notifyDataSetChanged()
@@ -236,7 +279,7 @@ open class HandlingFormActivity : AppCompatActivity() {
                 adapter.filter.filter(s)
                 try {
                     sp_jenis_hand.text = adapter.getItem(0)
-                }catch (e: Exception){
+                } catch (e: Exception) {
                     sp_jenis_hand.text = perlakuanArray[0]
                 }
             }
@@ -292,9 +335,7 @@ open class HandlingFormActivity : AppCompatActivity() {
                 R.id.saveHandling -> {
                     try {
                         if (posPhoto) {
-                            if (fname1.isNotEmpty() && temuanPupuk.et_komentar_temuan.text.toString()
-                                    .isNotEmpty()
-                            ) {
+                            if (fname1.isNotEmpty()) {
                                 takeFindingPhoto()
 
                                 posPhoto = !posPhoto
@@ -307,10 +348,11 @@ open class HandlingFormActivity : AppCompatActivity() {
                                 Toasty.success(this, "Sukses menyimpan foto!").show()
                             } else {
                                 if (fotoArray.size < 1) {
-                                    Toasty.warning(this, "Tambahkan foto temuan dan komentar!")
+                                    Toasty.warning(this, "Tambahkan foto temuan!")
                                         .show()
                                 } else {
-                                    Toasty.warning(this, "Hanya boleh mengunggah maksimal 1 foto!").show()
+                                    Toasty.warning(this, "Hanya boleh mengunggah maksimal 1 foto!")
+                                        .show()
                                 }
                             }
                         } else {
@@ -329,95 +371,11 @@ open class HandlingFormActivity : AppCompatActivity() {
                                     "Yakin menyimpan data?",
                                     "warning.json"
                                 ) {
-                                    if (fotoArray.isNotEmpty()) {
-                                        fname = fotoArray.toTypedArray().contentToString()
-                                        komen = komArray.toTypedArray().contentToString()
-                                    }
+                                    inserting = true
+                                    clLayoutHand.visibility = View.VISIBLE
 
-                                    val revKomen =
-                                        komen.replace("[", "").replace("]", "").split(",")
-                                            .toTypedArray()
-                                    for (i in revKomen.indices) {
-                                        val prefix = if (i == 0) "" else "$"
-                                        komenResult += "${prefix}${
-                                            revKomen[i].trim().replace("|", ",")
-                                        }"
-                                    }
-
-                                    val databaseHandler = PemupukanSQL(this)
-                                    val status = databaseHandler.addPokokKuning(
-                                        idPk = getId.toInt(),
-                                        estate = getEst,
-                                        afdeling = getAfd,
-                                        blok = getBlok,
-                                        kondisi = getCons,
-                                        datetime = SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(
-                                            Calendar.getInstance().time
-                                        ),
-                                        jenisPupukId = selectedPerlakuanIdArray.toTypedArray().contentToString(),
-                                        foto = fname.replace("[", "").replace("]", "")
-                                            .replace(",", "$").replace(" ", ""),
-                                        komen = komenResult,
-                                        app_ver = "${BuildConfig.VERSION_NAME};${Build.VERSION.RELEASE};${Build.MODEL};$getGPS"
-                                    )
-                                    if (status > -1) {
-                                        val pkPath =
-                                            this.getExternalFilesDir(null)?.absolutePath + "/MAIN/pk" + PrefManager(
-                                                this
-                                            ).dataReg!!
-                                        val fileMaps = File(pkPath)
-                                        if (fileMaps.exists()) {
-                                            try {
-                                                val readMaps = fileMaps.readText()
-                                                val objMaps = JSONObject(readMaps)
-
-                                                val estObjMaps = objMaps.getJSONObject(getEst)
-                                                val afdObjMaps =
-                                                    estObjMaps.getJSONObject(getAfd)
-                                                val blokObjMaps =
-                                                    afdObjMaps.getJSONObject(getBlok)
-                                                for (index in blokObjMaps.keys()) {
-                                                    val item =
-                                                        blokObjMaps.getJSONObject(index)
-                                                    if (getId == index) {
-                                                        item.put("status", "Sudah")
-                                                        fileMaps.writeText(objMaps.toString())
-                                                    }
-                                                }
-
-                                                AlertDialogUtility.withSingleAction(
-                                                    this,
-                                                    "OK",
-                                                    "Pemupukan Pokok Kuning telah tersimpan!",
-                                                    "success.json"
-                                                ) {
-                                                    val intent =
-                                                        Intent(this, MainActivity::class.java)
-                                                    startActivity(intent)
-                                                    finishAffinity()
-                                                }
-                                            } catch (e: Exception) {
-                                                AlertDialogUtility.alertDialog(
-                                                    this,
-                                                    "Terjadi kesalahan, hubungi pengembang. Error: $e",
-                                                    "warning.json"
-                                                )
-                                                e.printStackTrace()
-                                            }
-                                        } else {
-                                            AlertDialogUtility.alertDialog(
-                                                this,
-                                                "File JSON tidak ditemukan!",
-                                                "warning.json"
-                                            )
-                                        }
-                                    } else {
-                                        AlertDialogUtility.alertDialog(
-                                            this,
-                                            "Terjadi kesalahan, hubungi pengembang",
-                                            "warning.json"
-                                        )
-                                    }
+                                    handling.postDelayed(runnableCode, delay.toLong())
+                                    handling.postDelayed(stopRunnable, timeOut.toLong())
                                 }
                             }
                         }
@@ -435,6 +393,120 @@ open class HandlingFormActivity : AppCompatActivity() {
             }
             false
         })
+    }
+
+    private fun insertData() {
+        if (fotoArray.isNotEmpty()) {
+            fname = fotoArray.toTypedArray().contentToString()
+            komen = komArray.toTypedArray().contentToString()
+        }
+
+        val revKomen =
+            komen.replace("[", "").replace("]", "").split(",")
+                .toTypedArray()
+        for (i in revKomen.indices) {
+            val prefix = if (i == 0) "" else "$"
+            komenResult += "${prefix}${
+                revKomen[i].trim().replace("|", ",")
+            }"
+        }
+
+        val databaseHandler = PemupukanSQL(this)
+        val splitIdPk = getIdPk.split("$")
+        for (a in splitIdPk.indices) {
+            if (splitIdPk[a].isNotEmpty()) {
+                val status = databaseHandler.addPokokKuning(
+                    idPk = splitIdPk[a].toInt(),
+                    estate = getEst,
+                    afdeling = getAfd,
+                    blok = getBlok,
+                    kondisi = getCons,
+                    datetime = SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(
+                        Calendar.getInstance().time
+                    ),
+                    jenisPupukId = selectedPerlakuanIdArray.toTypedArray()
+                        .contentToString().replace("[", "")
+                        .replace("]", "").replace(" ", "")
+                        .replace(",", "$"),
+                    foto = fname.replace("[", "").replace("]", "")
+                        .replace(",", "$").replace(" ", ""),
+                    komen = komenResult,
+                    app_ver = "${BuildConfig.VERSION_NAME};${Build.VERSION.RELEASE};${Build.MODEL};$getGPS"
+                )
+
+                if (status > -1) {
+                    val pkPath =
+                        this.getExternalFilesDir(null)?.absolutePath + "/MAIN/pk" + PrefManager(
+                            this
+                        ).dataReg!!
+                    val fileMaps = File(pkPath)
+                    if (fileMaps.exists()) {
+                        try {
+                            val readMaps = fileMaps.readText()
+                            val objMaps = JSONObject(readMaps)
+
+                            val estObjMaps =
+                                objMaps.getJSONObject(getEst)
+                            val afdObjMaps =
+                                estObjMaps.getJSONObject(getAfd)
+                            val blokObjMaps =
+                                afdObjMaps.getJSONObject(getBlok)
+                            for (index in blokObjMaps.keys()) {
+                                val item =
+                                    blokObjMaps.getJSONObject(index)
+                                if (splitIdPk[a] == index) {
+                                    item.put("status", "Sudah")
+                                    fileMaps.writeText(objMaps.toString())
+                                }
+                            }
+
+                            if (a == splitIdPk.size - 1) {
+                                inserting = false
+                                AlertDialogUtility.withSingleAction(
+                                    this,
+                                    "OK",
+                                    "Pemupukan Pokok Kuning telah tersimpan!",
+                                    "success.json"
+                                ) {
+                                    val intent =
+                                        Intent(
+                                            this,
+                                            MainActivity::class.java
+                                        )
+                                    startActivity(intent)
+                                    finishAffinity()
+                                }
+                            }
+                        } catch (e: Exception) {
+                            inserting = false
+                            AlertDialogUtility.alertDialog(
+                                this,
+                                "Terjadi kesalahan, hubungi pengembang. Error: $e",
+                                "warning.json"
+                            )
+                            e.printStackTrace()
+                            break
+                        }
+                    } else {
+                        inserting = false
+                        AlertDialogUtility.alertDialog(
+                            this,
+                            "File JSON tidak ditemukan!",
+                            "warning.json"
+                        )
+                        break
+                    }
+                } else {
+                    inserting = false
+                    AlertDialogUtility.alertDialog(
+                        this,
+                        "Terjadi kesalahan, hubungi pengembang",
+                        "warning.json"
+                    )
+                    break
+                }
+            }
+        }
     }
 
     private fun updateSpeedDialItems(sdSaveUpload: SpeedDialView) {
@@ -752,11 +824,18 @@ open class HandlingFormActivity : AppCompatActivity() {
                                 Locale("id", "ID")
                             ).format(Calendar.getInstance().time) //nentuin tanggal dan jam
 
-                            val komentarEmp = temuanPupuk.et_komentar_temuan.text.toString()
+                            val wmDt = selectedPerlakuanArray.toTypedArray().contentToString().replace("[", "").replace("]", "")
+                            Log.d("cekData", "f: $wmDt")
+                            val fixWmDt = if (wmDt.length <= 50) {
+                                wmDt
+                            } else {
+                                wmDt.substring(0, 50) + ".."
+                            }
+                            Log.d("cekData", "l: $fixWmDt")
                             val watermarkedBitmap = addWatermark(
                                 bitmap,
                                 "POKOK KUNING/$getEst/$getAfd/$getBlok\n${
-                                    komentarEmp.replace("\n", " ")
+                                    fixWmDt
                                 }\n$dateWM"
                             )
 
@@ -765,11 +844,19 @@ open class HandlingFormActivity : AppCompatActivity() {
                                 var quality = 90
 
                                 val outputStream = ByteArrayOutputStream()
-                                watermarkedBitmap.compress(Bitmap.CompressFormat.JPEG, quality, outputStream)
+                                watermarkedBitmap.compress(
+                                    Bitmap.CompressFormat.JPEG,
+                                    quality,
+                                    outputStream
+                                )
                                 while (outputStream.size() > targetSizeBytes && quality > 0) {
                                     quality -= 5
                                     outputStream.reset()
-                                    watermarkedBitmap.compress(Bitmap.CompressFormat.JPEG, quality, outputStream)
+                                    watermarkedBitmap.compress(
+                                        Bitmap.CompressFormat.JPEG,
+                                        quality,
+                                        outputStream
+                                    )
                                 }
 
                                 try {
@@ -937,6 +1024,13 @@ open class HandlingFormActivity : AppCompatActivity() {
     override fun onBackPressed() {
         if (isCameraOpen) {
             closeCamera()
+        } else if (posPhoto) {
+            posPhoto = !posPhoto
+
+            svMainPupuk.visibility = if (!posPhoto) View.VISIBLE else View.GONE
+            temuanPupuk.visibility = if (!posPhoto) View.GONE else View.VISIBLE
+
+            updateSpeedDialItems(sdHandSaveUpload)
         } else {
             AlertDialogUtility.withTwoActions(
                 this,
@@ -948,7 +1042,7 @@ open class HandlingFormActivity : AppCompatActivity() {
                 val pm = PrefManagerEstate(this)
                 val intent = Intent(this, MapsActivity::class.java).putExtra("est", pm.estate)
                     .putExtra("afd", pm.afdeling).putExtra("blok", pm.blok)
-                    .putExtra("blokPlot", pm.blokPlot)
+                    .putExtra("blokPlot", pm.blokPlot).putExtra("idPk", getIdPk)
                 startActivity(intent)
                 finishAffinity()
             }

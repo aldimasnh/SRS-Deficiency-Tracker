@@ -388,7 +388,7 @@
                 android:layout_width="60dp"
                 android:layout_height="60dp"
                 android:layout_marginBottom="5dp"
-                android:backgroundTint="@color/chart_blue4"
+                android:backgroundTint="@color/colorPrimary"
                 app:cardCornerRadius="50dp">
 
                 <LinearLayout
@@ -433,7 +433,7 @@
                 android:layout_width="60dp"
                 android:layout_height="60dp"
                 android:layout_marginBottom="5dp"
-                android:backgroundTint="@color/chart_blue4"
+                android:backgroundTint="@color/blue1"
                 app:cardCornerRadius="50dp">
 
                 <LinearLayout
@@ -445,7 +445,7 @@
                     <ImageView
                         android:layout_width="30dp"
                         android:layout_height="30dp"
-                        android:src="@drawable/baseline_directions_walk_24"
+                        android:src="@drawable/baseline_navigation_24"
                         app:tint="@color/white" />
 
                 </LinearLayout>

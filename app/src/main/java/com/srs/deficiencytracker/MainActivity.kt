@@ -102,7 +102,7 @@ class MainActivity : AppCompatActivity() {
                 this,
                 "Batal",
                 "Logout",
-                "Apakah anda yakin untuk logout dari apikasi MobilePro?",
+                "Apakah anda yakin untuk logout dari aplikasi Deficiency Tracker?",
                 "warning.json"
             ) {
                 finishAffinity() //buat keluar

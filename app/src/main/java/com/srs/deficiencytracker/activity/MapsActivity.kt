@@ -86,12 +86,15 @@ open class MapsActivity : AppCompatActivity() {
     private var lastClickedMarker: Marker? = null
     private lateinit var sensorManager: SensorManager
 
+    private var getIdPk = ""
     private var getEst = ""
     private var getAfd = ""
     private var getBlok = ""
     private var getBlokPlot = ""
     private var urlCategory = ""
     private var fixBlok = ""
+
+    private val markerIds = ArrayList<Int>()
 
     /* [location] */
     private var mFusedLocationClient: FusedLocationProviderClient? = null
@@ -119,6 +122,13 @@ open class MapsActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_maps)
 
+        getIdPk = getDataIntent("idPk")
+        getEst = getDataIntent("est")
+        getAfd = getDataIntent("afd")
+        getBlok = getDataIntent("blok")
+        getBlokPlot = getDataIntent("blokPlot")
+        urlCategory = PrefManager(this).dataReg!!
+
         updateValuesFromBundle(savedInstanceState)
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         mSettingsClient = LocationServices.getSettingsClient(this)
@@ -127,11 +137,13 @@ open class MapsActivity : AppCompatActivity() {
         buildLocationSettingsRequest()
         mRequestingLocationUpdates = true
 
-        getEst = getDataIntent("est")
-        getAfd = getDataIntent("afd")
-        getBlok = getDataIntent("blok")
-        getBlokPlot = getDataIntent("blokPlot")
-        urlCategory = PrefManager(this).dataReg!!
+        Configuration.getInstance().load(this, PreferenceManager.getDefaultSharedPreferences(this))
+        mapView.setTileSource(TileSourceFactory.DEFAULT_TILE_SOURCE)
+        mapView.setMultiTouchControls(true)
+        mapView.setBuiltInZoomControls(true)
+
+        // Initialize sensor manager and sensors
+        sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
 
         if (getEst == "NBE") {
             if (getBlokPlot.length == 5) {
@@ -304,18 +316,11 @@ open class MapsActivity : AppCompatActivity() {
         avgLat /= latlnValues.size
         avgLon /= latlnValues.size
 
-        Configuration.getInstance().load(this, PreferenceManager.getDefaultSharedPreferences(this))
         val geoPoint =
             if (firstGPS) GeoPoint(lat!!.toDouble(), lon!!.toDouble()) else GeoPoint(avgLat, avgLon)
-        mapView.setMultiTouchControls(true)
         mapView.controller.animateTo(geoPoint)
-        mapView.setTileSource(TileSourceFactory.DEFAULT_TILE_SOURCE)
-        mapView.zoomController.setVisibility(CustomZoomButtonsController.Visibility.NEVER)
-        mapView.setBuiltInZoomControls(true)
         mapView.controller.setZoom(15.0)
-
-        // Initialize sensor manager and sensors
-        sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
+        mapView.zoomController.setVisibility(CustomZoomButtonsController.Visibility.NEVER)
 
         for (coordinateList in coordinates) {
             val polygon = Polygon()
@@ -338,6 +343,16 @@ open class MapsActivity : AppCompatActivity() {
                     Toasty.LENGTH_LONG
                 )
                     .show()
+            }
+        }
+
+        cvFUMaps.setOnClickListener {
+            if (markerIds.isEmpty()) {
+                AlertDialogUtility.alertDialog(
+                    this@MapsActivity,
+                    "Silakan pilih pokok kuning terlebih dahulu!",
+                    "warning.json"
+                )
             }
         }
 
@@ -452,7 +467,6 @@ open class MapsActivity : AppCompatActivity() {
         runOnUiThread {
             val arrBelum = ArrayList<Int>()
             val arrSudah = ArrayList<Int>()
-            val markerIds = ArrayList<Int>()
 
             for (j in modelList.indices) {
                 if (modelList[j].statusPk == "Sudah") {
@@ -463,7 +477,8 @@ open class MapsActivity : AppCompatActivity() {
             }
 
             for (i in modelList.indices) {
-                var selectedIcon = ContextCompat.getDrawable(this, R.drawable.baseline_close_circle_24)
+                var selectedIcon =
+                    ContextCompat.getDrawable(this, R.drawable.baseline_close_circle_24)
                 var drawable = ContextCompat.getDrawable(
                     this,
                     if (modelList[i].statusPk == "Sudah") R.drawable.baseline_circle_24 else R.drawable.ic_close
@@ -473,7 +488,7 @@ open class MapsActivity : AppCompatActivity() {
                     if (modelList[i].statusPk == "Sudah") {
                         R.color.green1
                     } else if (modelList[i].kondisiPk == "Pucat") {
-                        R.color.yellow1
+                        R.color.grey_default
                     } else if (modelList[i].kondisiPk == "Ringan") {
                         R.color.dashboard
                     } else {
@@ -485,7 +500,8 @@ open class MapsActivity : AppCompatActivity() {
 
                 val widthInPixels = if (modelList[i].statusPk == "Sudah") 50 else 100
                 val heightInPixels = if (modelList[i].statusPk == "Sudah") 50 else 100
-                val bitmap = Bitmap.createBitmap(widthInPixels, heightInPixels, Bitmap.Config.ARGB_8888)
+                val bitmap =
+                    Bitmap.createBitmap(widthInPixels, heightInPixels, Bitmap.Config.ARGB_8888)
                 val canvas = Canvas(bitmap)
 
                 selectedIcon?.setBounds(0, 0, widthInPixels, heightInPixels)
@@ -537,17 +553,20 @@ open class MapsActivity : AppCompatActivity() {
                                 }
                                 marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
                             } else {
-                                Toasty.warning(this@MapsActivity, "Maksimal hanya dapat menangani 20 titik!").show()
+                                Toasty.warning(
+                                    this@MapsActivity,
+                                    "Maksimal hanya dapat menangani 20 titik!"
+                                ).show()
                             }
                         }
 
                         Log.d("cekData", markerIds.toTypedArray().contentToString())
 
                         lastClickedMarker = marker
-                        tvPokokMaps.text = "${markerIds.size}/20"
                         tvBlokMaps.text = modelList[i].blokPk
                         tvKondisiMaps.text = modelList[i].kondisiPk
                         tvStatusMaps.text = modelList[i].statusPk + " ditangani"
+                        tvPokokMaps.text = "${markerIds.size}/20"
 
                         latPk = modelList[i].latPk
                         lonPk = modelList[i].lonPk
@@ -555,30 +574,44 @@ open class MapsActivity : AppCompatActivity() {
 
                         marker.showInfoWindow()
 
-                        cvFUMaps.visibility = if (modelList[i].statusPk == "Belum") View.VISIBLE else View.GONE
+                        cvFUMaps.visibility =
+                            if (modelList[i].statusPk == "Belum") View.VISIBLE else View.GONE
                         cvFUMaps.setOnClickListener {
                             if (firstGPS) {
-                                if (fixAccuracy > 10 || accuracyRange > 25) {
+                                /*if (fixAccuracy > 10 || accuracyRange > 25) {
                                     AlertDialogUtility.alertDialog(
                                         this@MapsActivity,
                                         "GPS belum memenuhi syarat!",
                                         "warning.json"
                                     )
-                                } else {
-                                    val intent =
-                                        Intent(
-                                            this@MapsActivity,
-                                            HandlingFormActivity::class.java
-                                        )
-                                            .putExtra("id", modelList[i].idPk.toString())
-                                            .putExtra("est", getEst)
-                                            .putExtra("afd", modelList[i].afdPk)
-                                            .putExtra("blok", modelList[i].blokPk)
-                                            .putExtra("kondisi", modelList[i].kondisiPk)
-                                            .putExtra("gps", "GA")
-                                    startActivity(intent)
-                                    finishAffinity()
-                                }
+                                } else {*/
+                                    AlertDialogUtility.withTwoActions(
+                                        this@MapsActivity,
+                                        "Batal",
+                                        "Ya",
+                                        "Apakah anda yakin untuk melakukan penanganan?",
+                                        "warning.json"
+                                    ) {
+                                        val intent =
+                                            Intent(
+                                                this@MapsActivity,
+                                                HandlingFormActivity::class.java
+                                            )
+                                                .putExtra(
+                                                    "id",
+                                                    markerIds.toTypedArray().contentToString()
+                                                        .replace("[", "").replace("]", "").replace(" ", "")
+                                                        .replace(",", "$")
+                                                )
+                                                .putExtra("est", getEst)
+                                                .putExtra("afd", modelList[i].afdPk)
+                                                .putExtra("blok", modelList[i].blokPk)
+                                                .putExtra("kondisi", modelList[i].kondisiPk)
+                                                .putExtra("gps", "GA")
+                                        startActivity(intent)
+                                        finishAffinity()
+                                    }
+                                /*}*/
                             } else {
                                 Toasty.warning(
                                     this@MapsActivity,
@@ -620,7 +653,11 @@ open class MapsActivity : AppCompatActivity() {
             requestPermissions()
         }
         val orientationSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ORIENTATION)
-        sensorManager.registerListener(sensorListener, orientationSensor, SensorManager.SENSOR_DELAY_NORMAL)
+        sensorManager.registerListener(
+            sensorListener,
+            orientationSensor,
+            SensorManager.SENSOR_DELAY_NORMAL
+        )
     }
 
     public override fun onPause() {
@@ -898,8 +935,9 @@ open class MapsActivity : AppCompatActivity() {
                 mapView.overlays.remove(it)
             }
 
-            var originalDrawable = ContextCompat.getDrawable(this, R.drawable.baseline_navigation_24)
-            val color = ContextCompat.getColor(this, R.color.colorPrimaryDark)
+            var originalDrawable =
+                ContextCompat.getDrawable(this, R.drawable.baseline_navigation_24)
+            val color = ContextCompat.getColor(this, R.color.blue1)
             originalDrawable?.let {
                 DrawableCompat.setTint(it, color)
             }
@@ -928,15 +966,17 @@ open class MapsActivity : AppCompatActivity() {
             currentMarker = newMarker
 
             mapView.invalidate()
-        }catch (e: Exception) {
+        } catch (e: Exception) {
             Toasty.error(this, "Error mapview:$e", Toasty.LENGTH_SHORT).show()
         }
     }
 
     private fun rangePos() {
         if (latPk != null) {
-            val (rangeKm, rangeM) = rangeTreeAndCurrentPos(GeoPoint(latPk!!, lonPk!!),
-                GeoPoint(lat!!.toDouble(), lon!!.toDouble()))
+            val (rangeKm, rangeM) = rangeTreeAndCurrentPos(
+                GeoPoint(latPk!!, lonPk!!),
+                GeoPoint(lat!!.toDouble(), lon!!.toDouble())
+            )
             accuracyRange = rangeM
             tvJarakMaps.text = rangeKm
             if (accuracyRange > 25) {

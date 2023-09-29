@@ -60,7 +60,7 @@ class PemupukanSQL(context: Context) : SQLiteOpenHelper(
                     "$db_datetime VARCHAR, " +
                     "$db_jenisPupukID VARCHAR, " +
                     "$db_photo VARCHAR," +
-                    " $db_komen VARCHAR, " +
+                    "$db_komen VARCHAR, " +
                     "$db_archive INTEGER, " +
                     "$db_app_ver VARCHAR)")
 
