@@ -44,6 +44,7 @@ import com.srs.deficiencytracker.BuildConfig
 import com.srs.deficiencytracker.MainActivity
 import com.srs.deficiencytracker.R
 import com.srs.deficiencytracker.utilities.AlertDialogUtility
+import com.srs.deficiencytracker.utilities.DashedLineOverlay
 import com.srs.deficiencytracker.utilities.ModelMain
 import com.srs.deficiencytracker.utilities.PrefManager
 import de.mateware.snacky.Snacky
@@ -82,9 +83,10 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 
 open class MapsActivity : AppCompatActivity() {
-    var modelMainList: MutableList<ModelMain> = ArrayList()
+    private var modelMainList: MutableList<ModelMain> = ArrayList()
     private var lastClickedMarker: Marker? = null
     private lateinit var sensorManager: SensorManager
+    private var previousDashedLine: DashedLineOverlay? = null
 
     private var getIdPk = ""
     private var getEst = ""
@@ -108,7 +110,6 @@ open class MapsActivity : AppCompatActivity() {
     private var lat: Float? = null
     private var lon: Float? = null
     private var currentMarker: Marker? = null
-    private var testMarker: Marker? = null
 
     private var positionMaps = false
     private var firstGPS = false
@@ -334,8 +335,8 @@ open class MapsActivity : AppCompatActivity() {
 
         cvCenterMaps.setOnClickListener {
             if (firstGPS) {
-                val geoPoint = GeoPoint(lat!!.toDouble(), lon!!.toDouble())
-                mapView.controller.animateTo(geoPoint)
+                val centerPoint = GeoPoint(lat!!.toDouble(), lon!!.toDouble())
+                mapView.controller.animateTo(centerPoint)
             } else {
                 Toasty.warning(
                     this@MapsActivity,
@@ -520,6 +521,7 @@ open class MapsActivity : AppCompatActivity() {
                 marker.position = GeoPoint(modelList[i].latPk, modelList[i].lonPk)
                 marker.title = modelList[i].idPk.toString()
                 marker.snippet = "$getEst - ${modelList[i].afdPk}"
+                marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
 
                 val formattedDate = SimpleDateFormat("MMM yyyy", Locale("id", "ID"))
                 tvTglFotoMaps.text = formattedDate.format(
@@ -533,9 +535,7 @@ open class MapsActivity : AppCompatActivity() {
 
                 marker.setOnMarkerClickListener(object : Marker.OnMarkerClickListener {
                     override fun onMarkerClick(marker: Marker, mapView: MapView): Boolean {
-                        if (lastClickedMarker != null) {
-                            lastClickedMarker?.closeInfoWindow()
-                        }
+                        marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
 
                         val markerId = modelList[i].idPk
                         if (modelList[i].statusPk == "Belum") {
@@ -551,7 +551,6 @@ open class MapsActivity : AppCompatActivity() {
                                     markerIds.add(markerId)
                                     marker.icon = selectedIcon
                                 }
-                                marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
                             } else {
                                 Toasty.warning(
                                     this@MapsActivity,
@@ -560,31 +559,26 @@ open class MapsActivity : AppCompatActivity() {
                             }
                         }
 
-                        Log.d("cekData", markerIds.toTypedArray().contentToString())
-
-                        lastClickedMarker = marker
                         tvBlokMaps.text = modelList[i].blokPk
                         tvKondisiMaps.text = modelList[i].kondisiPk
                         tvStatusMaps.text = modelList[i].statusPk + " ditangani"
                         tvPokokMaps.text = "${markerIds.size}/20"
 
-                        latPk = modelList[i].latPk
-                        lonPk = modelList[i].lonPk
-                        rangePos()
-
-                        marker.showInfoWindow()
-
-                        cvFUMaps.visibility =
-                            if (modelList[i].statusPk == "Belum") View.VISIBLE else View.GONE
                         cvFUMaps.setOnClickListener {
                             if (firstGPS) {
-                                /*if (fixAccuracy > 10 || accuracyRange > 25) {
+                                if (markerIds.isEmpty()) {
+                                    AlertDialogUtility.alertDialog(
+                                        this@MapsActivity,
+                                        "Silakan pilih pokok kuning terlebih dahulu!",
+                                        "warning.json"
+                                    )
+                                } else if (fixAccuracy > 10 || accuracyRange > 25) {
                                     AlertDialogUtility.alertDialog(
                                         this@MapsActivity,
                                         "GPS belum memenuhi syarat!",
                                         "warning.json"
                                     )
-                                } else {*/
+                                } else {
                                     AlertDialogUtility.withTwoActions(
                                         this@MapsActivity,
                                         "Batal",
@@ -600,7 +594,8 @@ open class MapsActivity : AppCompatActivity() {
                                                 .putExtra(
                                                     "id",
                                                     markerIds.toTypedArray().contentToString()
-                                                        .replace("[", "").replace("]", "").replace(" ", "")
+                                                        .replace("[", "").replace("]", "")
+                                                        .replace(" ", "")
                                                         .replace(",", "$")
                                                 )
                                                 .putExtra("est", getEst)
@@ -611,7 +606,7 @@ open class MapsActivity : AppCompatActivity() {
                                         startActivity(intent)
                                         finishAffinity()
                                     }
-                                /*}*/
+                                }
                             } else {
                                 Toasty.warning(
                                     this@MapsActivity,
@@ -619,6 +614,44 @@ open class MapsActivity : AppCompatActivity() {
                                     Toasty.LENGTH_LONG
                                 )
                                     .show()
+                            }
+                        }
+
+                        if (modelList[i].statusPk != "Sudah") {
+                            if (marker == lastClickedMarker) {
+                                mapView.overlays.remove(previousDashedLine)
+                                lastClickedMarker?.closeInfoWindow()
+                                previousDashedLine = null
+                                lastClickedMarker = null
+                                latPk = null
+                                lonPk = null
+                                tvJarakMaps.text = "-"
+                            } else {
+                                previousDashedLine?.let {
+                                    mapView.overlays.remove(it)
+                                }
+
+                                val startPoint = try {
+                                    GeoPoint(lat!!.toDouble(), lon!!.toDouble())
+                                } catch (e: Exception) {
+                                    GeoPoint(0.0, 0.0)
+                                }
+                                val endPoint = GeoPoint(modelList[i].latPk, modelList[i].lonPk)
+
+                                val points = listOf(startPoint, endPoint)
+                                val dashedLineOverlay = DashedLineOverlay(points, mapView)
+
+                                previousDashedLine = dashedLineOverlay
+                                lastClickedMarker = marker
+
+                                latPk = modelList[i].latPk
+                                lonPk = modelList[i].lonPk
+                                rangePos()
+
+                                marker.showInfoWindow()
+
+                                mapView.overlays.add(dashedLineOverlay)
+                                mapView.invalidate()
                             }
                         }
 

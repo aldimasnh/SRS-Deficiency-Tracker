@@ -56,7 +56,12 @@ import kotlinx.android.synthetic.main.header_form.*
 import kotlinx.android.synthetic.main.header_form.view.*
 import kotlinx.android.synthetic.main.loading_file_layout.view.logoFileLoader
 import kotlinx.android.synthetic.main.loading_file_layout.view.lottieFileLoader
+import kotlinx.android.synthetic.main.loading_file_layout.view.tvHintFileLoader
 import kotlinx.android.synthetic.main.zoom_foto_layout.view.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -113,26 +118,8 @@ open class HandlingFormActivity : AppCompatActivity() {
     private var isCameraOpen = false
     private var isFlashlightOn = false
 
+    private val coroutineScope = CoroutineScope(Dispatchers.Main)
     var inserting = false
-    val handling = Handler()
-    val delay = 1000
-    private val timeOut = 10000
-    private val runnableCode = object : Runnable {
-        override fun run() {
-            if (inserting) {
-                insertData()
-            } else {
-                handling.removeCallbacks(this)
-                clLayoutHand.visibility = View.GONE
-            }
-
-            handling.postDelayed(this, delay.toLong())
-        }
-    }
-    private val stopRunnable = Runnable {
-        handling.removeCallbacks(runnableCode)
-        clLayoutHand.visibility = View.GONE
-    }
 
     @SuppressLint("SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -145,7 +132,6 @@ open class HandlingFormActivity : AppCompatActivity() {
         getBlok = getDataIntent("blok")
         getCons = getDataIntent("kondisi")
         getGPS = getDataIntent("gps")
-        Log.d("cekData", getIdPk)
 
         rootDCIM = File(
             Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM),
@@ -163,6 +149,7 @@ open class HandlingFormActivity : AppCompatActivity() {
         @Suppress("DEPRECATION")
         loadingHand.lottieFileLoader.loop(true)
         loadingHand.lottieFileLoader.playAnimation()
+        loadingHand.tvHintFileLoader.text = "Mohon ditunggu, sedang memproses"
 
         getListPupuk()
         header_hand.icLocationHeader.visibility = View.GONE
@@ -374,8 +361,16 @@ open class HandlingFormActivity : AppCompatActivity() {
                                     inserting = true
                                     clLayoutHand.visibility = View.VISIBLE
 
-                                    handling.postDelayed(runnableCode, delay.toLong())
-                                    handling.postDelayed(stopRunnable, timeOut.toLong())
+                                    coroutineScope.launch {
+                                        withContext(Dispatchers.IO) {
+                                            insertData()
+                                        }
+
+                                        withContext(Dispatchers.Main) {
+                                            clLayoutHand.visibility = View.GONE
+                                            inserting = false
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -462,47 +457,55 @@ open class HandlingFormActivity : AppCompatActivity() {
 
                             if (a == splitIdPk.size - 1) {
                                 inserting = false
-                                AlertDialogUtility.withSingleAction(
-                                    this,
-                                    "OK",
-                                    "Pemupukan Pokok Kuning telah tersimpan!",
-                                    "success.json"
-                                ) {
-                                    val intent =
-                                        Intent(
-                                            this,
-                                            MainActivity::class.java
-                                        )
-                                    startActivity(intent)
-                                    finishAffinity()
+                                runOnUiThread {
+                                    AlertDialogUtility.withSingleAction(
+                                        this,
+                                        "OK",
+                                        "Pemupukan Pokok Kuning telah tersimpan!",
+                                        "success.json"
+                                    ) {
+                                        val intent =
+                                            Intent(
+                                                this,
+                                                MainActivity::class.java
+                                            )
+                                        startActivity(intent)
+                                        finishAffinity()
+                                    }
                                 }
                             }
                         } catch (e: Exception) {
                             inserting = false
-                            AlertDialogUtility.alertDialog(
-                                this,
-                                "Terjadi kesalahan, hubungi pengembang. Error: $e",
-                                "warning.json"
-                            )
+                            runOnUiThread {
+                                AlertDialogUtility.alertDialog(
+                                    this,
+                                    "Terjadi kesalahan, hubungi pengembang. Error: $e",
+                                    "warning.json"
+                                )
+                            }
                             e.printStackTrace()
                             break
                         }
                     } else {
                         inserting = false
-                        AlertDialogUtility.alertDialog(
-                            this,
-                            "File JSON tidak ditemukan!",
-                            "warning.json"
-                        )
+                        runOnUiThread {
+                            AlertDialogUtility.alertDialog(
+                                this,
+                                "File JSON tidak ditemukan!",
+                                "warning.json"
+                            )
+                        }
                         break
                     }
                 } else {
                     inserting = false
-                    AlertDialogUtility.alertDialog(
-                        this,
-                        "Terjadi kesalahan, hubungi pengembang",
-                        "warning.json"
-                    )
+                    runOnUiThread {
+                        AlertDialogUtility.alertDialog(
+                            this,
+                            "Terjadi kesalahan, hubungi pengembang",
+                            "warning.json"
+                        )
+                    }
                     break
                 }
             }
@@ -825,13 +828,11 @@ open class HandlingFormActivity : AppCompatActivity() {
                             ).format(Calendar.getInstance().time) //nentuin tanggal dan jam
 
                             val wmDt = selectedPerlakuanArray.toTypedArray().contentToString().replace("[", "").replace("]", "")
-                            Log.d("cekData", "f: $wmDt")
                             val fixWmDt = if (wmDt.length <= 50) {
                                 wmDt
                             } else {
                                 wmDt.substring(0, 50) + ".."
                             }
-                            Log.d("cekData", "l: $fixWmDt")
                             val watermarkedBitmap = addWatermark(
                                 bitmap,
                                 "POKOK KUNING/$getEst/$getAfd/$getBlok\n${
