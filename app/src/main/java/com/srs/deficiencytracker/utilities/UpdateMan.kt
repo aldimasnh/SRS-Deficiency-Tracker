@@ -689,7 +689,7 @@ class UpdateMan {
                             if (fDeleteDBC.exists()) {
                                 fDeleteDBC.delete()
                             }
-                            Toasty.success(context, "Data sudah is up to date!").show()
+                            Toasty.success(context, "Data blok is up to date!").show()
                         } else if (cacheCheck != mainCheck) {
                             Log.d("cek", "BEDA")
                             val fDeleteDBC =

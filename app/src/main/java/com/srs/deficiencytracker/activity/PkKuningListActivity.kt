@@ -335,20 +335,7 @@ class PkKuningListActivity : AppCompatActivity() {
 
                     if (connected) {
                         if (PemupukanSQL(this).setRecordPkKuning().toInt() > 0) {
-                            val department = try {
-                                PrefManager(this).departemen!!
-                            } catch (e: Exception) {
-                                "null"
-                            }
-                            if (department.contains("QC")) {
-                                post()
-                            } else {
-                                AlertDialogUtility.alertDialog(
-                                    this,
-                                    "${PrefManager(this).name!!} bukan termasuk anggota QC!",
-                                    "warning.json"
-                                )
-                            }
+                            post()
                         } else {
                             Toasty.warning(this, "Tidak ada data dalam list!!", Toast.LENGTH_SHORT)
                                 .show()

@@ -33,6 +33,7 @@ import com.srs.deficiencytracker.MainActivity
 import com.srs.deficiencytracker.R
 import com.srs.deficiencytracker.utilities.AlertDialogUtility
 import com.srs.deficiencytracker.utilities.FileMan
+import com.srs.deficiencytracker.utilities.ModelMain
 import com.srs.deficiencytracker.utilities.PrefManager
 import com.srs.deficiencytracker.utilities.PrefManagerEstate
 import de.mateware.snacky.Snacky
@@ -299,6 +300,27 @@ open class FormMapsActivity : AppCompatActivity() {
                     sphArrayList.add(sphArray[i])
                 }
             }
+
+            val pkPath = this.getExternalFilesDir(null)?.absolutePath + "/MAIN/pk" + urlCategory
+            val fileMaps = File(pkPath)
+            if (fileMaps.exists()) {
+                try {
+                    val readMaps = fileMaps.readText()
+                    val objMaps = JSONObject(readMaps)
+                    val estObjMaps = objMaps.getJSONObject(est)
+                    val afdObjMaps = estObjMaps.getJSONObject(afd)
+                    for (indexAfd in afdObjMaps.keys()) {
+                        if (!blokArrayList.contains(indexAfd)) {
+                            blokArrayList.add(indexAfd)
+                            blokPlotArrayList.add(indexAfd)
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.d("ET", "Error: $e")
+                    e.printStackTrace()
+                }
+            }
+
             blokArrayList.sort()
             blokPlotArrayList.sort()
             sp_blok_form.setItems(blokArrayList)
@@ -366,6 +388,27 @@ open class FormMapsActivity : AppCompatActivity() {
                         sphArrayList.add(sphArray[i])
                     }
                 }
+
+                val pkPath = this.getExternalFilesDir(null)?.absolutePath + "/MAIN/pk" + urlCategory
+                val fileMaps = File(pkPath)
+                if (fileMaps.exists()) {
+                    try {
+                        val readMaps = fileMaps.readText()
+                        val objMaps = JSONObject(readMaps)
+                        val estObjMaps = objMaps.getJSONObject(est)
+                        val afdObjMaps = estObjMaps.getJSONObject(afd)
+                        for (indexAfd in afdObjMaps.keys()) {
+                            if (!blokArrayList.contains(indexAfd)) {
+                                blokArrayList.add(indexAfd)
+                                blokPlotArrayList.add(indexAfd)
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.d("ET", "Error: $e")
+                        e.printStackTrace()
+                    }
+                }
+
                 blokArrayList.sort()
                 blokPlotArrayList.sort()
                 sp_blok_form.setItems(blokArrayList)
@@ -460,6 +503,7 @@ open class FormMapsActivity : AppCompatActivity() {
                                 .putExtra("afd", afd)
                                 .putExtra("blok", blok)
                                 .putExtra("blokPlot", blokPlot)
+                                .putExtra("pos", "$lat$$lon")
                         startActivity(intent)
                         finishAffinity()
                     } else {

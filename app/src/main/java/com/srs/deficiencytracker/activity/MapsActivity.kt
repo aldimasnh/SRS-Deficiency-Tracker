@@ -7,6 +7,8 @@ import android.content.Intent
 import android.content.IntentSender
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
+import android.database.Cursor
+import android.database.sqlite.SQLiteException
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
@@ -43,10 +45,12 @@ import com.google.android.material.snackbar.Snackbar
 import com.srs.deficiencytracker.BuildConfig
 import com.srs.deficiencytracker.MainActivity
 import com.srs.deficiencytracker.R
+import com.srs.deficiencytracker.database.PemupukanSQL
 import com.srs.deficiencytracker.utilities.AlertDialogUtility
 import com.srs.deficiencytracker.utilities.DashedLineOverlay
 import com.srs.deficiencytracker.utilities.ModelMain
 import com.srs.deficiencytracker.utilities.PrefManager
+import com.srs.deficiencytracker.utilities.TextPolygonOverlay
 import de.mateware.snacky.Snacky
 import es.dmoral.toasty.Toasty
 import kotlinx.android.synthetic.main.activity_maps.cvCenterMaps
@@ -93,10 +97,15 @@ open class MapsActivity : AppCompatActivity() {
     private var getAfd = ""
     private var getBlok = ""
     private var getBlokPlot = ""
+    private var getPos = ""
+
     private var urlCategory = ""
     private var fixBlok = ""
 
     private val markerIds = ArrayList<Int>()
+
+    private var perlakuanArray = ArrayList<String>()
+    private var perlakuanIdArray = ArrayList<Int>()
 
     /* [location] */
     private var mFusedLocationClient: FusedLocationProviderClient? = null
@@ -128,8 +137,10 @@ open class MapsActivity : AppCompatActivity() {
         getAfd = getDataIntent("afd")
         getBlok = getDataIntent("blok")
         getBlokPlot = getDataIntent("blokPlot")
+        getPos = getDataIntent("pos")
         urlCategory = PrefManager(this).dataReg!!
 
+        getListPupuk()
         updateValuesFromBundle(savedInstanceState)
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         mSettingsClient = LocationServices.getSettingsClient(this)
@@ -157,7 +168,10 @@ open class MapsActivity : AppCompatActivity() {
                 fixBlok = getBlokPlot[0] + getBlokPlot.substring(2)
             }
         } else {
-            if (getBlokPlot.length == 5) {
+            if (getBlokPlot.startsWith("P")) {
+                val sliced = getBlokPlot.substring(0, getBlokPlot.length - 2)
+                fixBlok = sliced + "0" + getBlokPlot.takeLast(2)
+            } else if (getBlokPlot.length == 5) {
                 val sliced = getBlokPlot.substring(0, getBlokPlot.length - 2)
                 fixBlok = sliced.replaceRange(1, 1, "0")
             } else if (getEst == "KTE" || getEst == "MKE" || getEst == "PKE" || getEst == "BSE" || getEst == "BWE" || getEst == "GDE") {
@@ -200,6 +214,7 @@ open class MapsActivity : AppCompatActivity() {
             }
         }
 
+        val blokArray = ArrayList<String>()
         val latlnValues = ArrayList<IGeoPoint>()
         val coordinates = mutableListOf<List<GeoPoint>>()
         var currentCoordinateList = mutableListOf<GeoPoint>()
@@ -218,27 +233,30 @@ open class MapsActivity : AppCompatActivity() {
                         for (index in indicesAfd) {
                             val blokObjMaps = afdObjMaps.getJSONObject(index)
                             val splLatLn = blokObjMaps.getString("latln").split("$").toTypedArray()
-                            for (item in splLatLn) {
-                                if (item.isBlank()) {
-                                    if (currentCoordinateList.isNotEmpty()) {
-                                        coordinates.add(currentCoordinateList.toList())
-                                        currentCoordinateList.clear()
-                                    }
-                                } else {
-                                    val parts = item.split(", ")
-                                    if (parts.size == 2) {
-                                        val latitude = parts[0].toDouble()
-                                        val longitude = parts[1].toDouble()
-                                        val geoPoint = GeoPoint(latitude, longitude)
+                            if (index.isNotEmpty()) {
+                                blokArray.add(index)
+                                for (item in splLatLn) {
+                                    if (item.isBlank()) {
+                                        if (currentCoordinateList.isNotEmpty()) {
+                                            coordinates.add(currentCoordinateList.toList())
+                                            currentCoordinateList.clear()
+                                        }
+                                    } else {
+                                        val parts = item.split(", ")
+                                        if (parts.size == 2) {
+                                            val latitude = parts[0].toDouble()
+                                            val longitude = parts[1].toDouble()
+                                            val geoPoint = GeoPoint(latitude, longitude)
 
-                                        latlnValues.add(geoPoint) // To get all latlon and be get a average of lat lon to centered maps
-                                        currentCoordinateList.add(geoPoint)
+                                            latlnValues.add(geoPoint) // To get all latlon and be get a average of lat lon to centered maps
+                                            currentCoordinateList.add(geoPoint)
+                                        }
                                     }
                                 }
-                            }
 
-                            if (currentCoordinateList.isNotEmpty()) {
-                                coordinates.add(currentCoordinateList.toList())
+                                if (currentCoordinateList.isNotEmpty()) {
+                                    coordinates.add(currentCoordinateList.toList())
+                                }
                             }
                         }
                     }
@@ -248,6 +266,37 @@ open class MapsActivity : AppCompatActivity() {
                         for (index in indicesAfd) {
                             val blokObjMaps = estObjMaps.getJSONObject(getAfd).getJSONObject(index)
                             val splLatLn = blokObjMaps.getString("latln").split("$").toTypedArray()
+                            if (index.isNotEmpty()) {
+                                blokArray.add(index)
+                                for (item in splLatLn) {
+                                    if (item.isBlank()) {
+                                        if (currentCoordinateList.isNotEmpty()) {
+                                            coordinates.add(currentCoordinateList.toList())
+                                            currentCoordinateList.clear()
+                                        }
+                                    } else {
+                                        val parts = item.split(", ")
+                                        if (parts.size == 2) {
+                                            val latitude = parts[0].toDouble()
+                                            val longitude = parts[1].toDouble()
+                                            val geoPoint = GeoPoint(latitude, longitude)
+
+                                            latlnValues.add(geoPoint) // To get all latlon and be get a average of lat lon to centered maps
+                                            currentCoordinateList.add(geoPoint)
+                                        }
+                                    }
+                                }
+
+                                if (currentCoordinateList.isNotEmpty()) {
+                                    coordinates.add(currentCoordinateList.toList())
+                                }
+                            }
+                        }
+                    } else {
+                        val blokObjMaps = estObjMaps.getJSONObject(getAfd).getJSONObject(fixBlok)
+                        val splLatLn = blokObjMaps.getString("latln").split("$").toTypedArray()
+                        if (fixBlok.isNotEmpty()) {
+                            blokArray.add(fixBlok)
                             for (item in splLatLn) {
                                 if (item.isBlank()) {
                                     if (currentCoordinateList.isNotEmpty()) {
@@ -270,31 +319,6 @@ open class MapsActivity : AppCompatActivity() {
                             if (currentCoordinateList.isNotEmpty()) {
                                 coordinates.add(currentCoordinateList.toList())
                             }
-                        }
-                    } else {
-                        val blokObjMaps = estObjMaps.getJSONObject(getAfd).getJSONObject(fixBlok)
-                        val splLatLn = blokObjMaps.getString("latln").split("$").toTypedArray()
-                        for (item in splLatLn) {
-                            if (item.isBlank()) {
-                                if (currentCoordinateList.isNotEmpty()) {
-                                    coordinates.add(currentCoordinateList.toList())
-                                    currentCoordinateList.clear()
-                                }
-                            } else {
-                                val parts = item.split(", ")
-                                if (parts.size == 2) {
-                                    val latitude = parts[0].toDouble()
-                                    val longitude = parts[1].toDouble()
-                                    val geoPoint = GeoPoint(latitude, longitude)
-
-                                    latlnValues.add(geoPoint) // To get all latlon and be get a average of lat lon to centered maps
-                                    currentCoordinateList.add(geoPoint)
-                                }
-                            }
-                        }
-
-                        if (currentCoordinateList.isNotEmpty()) {
-                            coordinates.add(currentCoordinateList.toList())
                         }
                     }
                 }
@@ -318,20 +342,43 @@ open class MapsActivity : AppCompatActivity() {
         avgLon /= latlnValues.size
 
         val geoPoint =
-            if (firstGPS) GeoPoint(lat!!.toDouble(), lon!!.toDouble()) else GeoPoint(avgLat, avgLon)
+            if (firstGPS) {
+                GeoPoint(lat!!.toDouble(), lon!!.toDouble())
+            } else if (!avgLat.isNaN()) {
+                GeoPoint(avgLat, avgLon)
+            } else {
+                val currentPos = getPos.split("$")
+                GeoPoint(currentPos[0].toDouble(), currentPos[1].toDouble())
+            }
         mapView.controller.animateTo(geoPoint)
         mapView.controller.setZoom(15.0)
         mapView.zoomController.setVisibility(CustomZoomButtonsController.Visibility.NEVER)
 
-        for (coordinateList in coordinates) {
+        for (i in coordinates.indices) {
             val polygon = Polygon()
-            polygon.points = coordinateList
+            polygon.points = coordinates[i]
             polygon.fillPaint.color = 0x1523CB1F // Fill color (semi-transparent green)
             polygon.strokeColor = 0xFF000000.toInt() // Stroke color (black)
             polygon.strokeWidth = 2f
+
+            var avgLatBlok = 0.0
+            var avgLonBlok = 0.0
+
+            for (geoBlok in coordinates[i]) {
+                avgLatBlok += geoBlok.latitude
+                avgLonBlok += geoBlok.longitude
+            }
+
+            avgLatBlok /= coordinates[i].size
+            avgLonBlok /= coordinates[i].size
+
+            val textOverlay =
+                TextPolygonOverlay(mapView, GeoPoint(avgLatBlok, avgLonBlok), blokArray[i])
+
+            mapView.overlays.add(textOverlay)
             mapView.overlays.add(polygon)
+            mapView.invalidate()
         }
-        mapView.invalidate()
 
         cvCenterMaps.setOnClickListener {
             if (firstGPS) {
@@ -399,6 +446,16 @@ open class MapsActivity : AppCompatActivity() {
                                     modelMain.kondisiPk = item.getString("kondisi")
                                     modelMain.statusPk = item.getString("status")
                                     modelMain.tglPk = item.getString("tgl_foto_udara")
+                                    modelMain.perlakuanPk = try {
+                                        item.getString("perlakuan")
+                                    } catch (e: Exception) {
+                                        ""
+                                    }
+                                    modelMain.tglPerlakuanPk = try {
+                                        item.getString("tanggal")
+                                    } catch (e: Exception) {
+                                        ""
+                                    }
                                     val fixLatLn =
                                         item.getString("latln").replace(" ", "").split(",")
                                             .toTypedArray()
@@ -422,6 +479,16 @@ open class MapsActivity : AppCompatActivity() {
                                     modelMain.kondisiPk = item.getString("kondisi")
                                     modelMain.statusPk = item.getString("status")
                                     modelMain.tglPk = item.getString("tgl_foto_udara")
+                                    modelMain.perlakuanPk = try {
+                                        item.getString("perlakuan")
+                                    } catch (e: Exception) {
+                                        ""
+                                    }
+                                    modelMain.tglPerlakuanPk = try {
+                                        item.getString("tanggal")
+                                    } catch (e: Exception) {
+                                        ""
+                                    }
                                     val fixLatLn =
                                         item.getString("latln").replace(" ", "").split(",")
                                             .toTypedArray()
@@ -441,6 +508,16 @@ open class MapsActivity : AppCompatActivity() {
                                 modelMain.kondisiPk = item.getString("kondisi")
                                 modelMain.statusPk = item.getString("status")
                                 modelMain.tglPk = item.getString("tgl_foto_udara")
+                                modelMain.perlakuanPk = try {
+                                    item.getString("perlakuan")
+                                } catch (e: Exception) {
+                                    ""
+                                }
+                                modelMain.tglPerlakuanPk = try {
+                                    item.getString("tanggal")
+                                } catch (e: Exception) {
+                                    ""
+                                }
                                 val fixLatLn =
                                     item.getString("latln").replace(" ", "").split(",")
                                         .toTypedArray()
@@ -516,11 +593,47 @@ open class MapsActivity : AppCompatActivity() {
                     drawable = BitmapDrawable(resources, bitmap)
                 }
 
+                val resultAction = ArrayList<String>()
+                val splitPerlakuan = modelList[i].perlakuanPk.split("$")
+                for (j in perlakuanIdArray.indices) {
+                    for (k in splitPerlakuan.indices) {
+                        if (splitPerlakuan[k] == perlakuanIdArray[j].toString()) {
+                            resultAction.add("-" + perlakuanArray[j])
+                        }
+                    }
+                }
+
+                var inputDate = modelList[i].tglPerlakuanPk
+                val inputFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale("id", "ID"))
+                val outputFormat = SimpleDateFormat("dd MMMM yyyy", Locale("id", "ID"))
+
+                try {
+                    val dateParse = inputFormat.parse(inputDate)
+                    inputDate = outputFormat.format(dateParse)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+
+                val snippetAction =
+                    "<br>Jenis perlakuan:<br>" + resultAction.toTypedArray().contentToString()
+                        .replace("[", "").replace("]", "").replace(
+                            ", ",
+                            "<br>"
+                        ).replace("-", "- ") + "<br><br>Tanggal perlakuan:<br>" + inputDate
+
                 val marker = Marker(mapView)
                 marker.icon = drawable
                 marker.position = GeoPoint(modelList[i].latPk, modelList[i].lonPk)
-                marker.title = modelList[i].idPk.toString()
-                marker.snippet = "$getEst - ${modelList[i].afdPk}"
+                marker.title = if (modelList[i].statusPk == "Belum") {
+                    modelList[i].idPk.toString()
+                } else {
+                    "$getEst - ${modelList[i].afdPk}"
+                }
+                marker.snippet = if (modelList[i].statusPk == "Belum") {
+                    "$getEst - ${modelList[i].afdPk}"
+                } else {
+                    snippetAction
+                }
                 marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
 
                 val formattedDate = SimpleDateFormat("MMM yyyy", Locale("id", "ID"))
@@ -572,13 +685,13 @@ open class MapsActivity : AppCompatActivity() {
                                         "Silakan pilih pokok kuning terlebih dahulu!",
                                         "warning.json"
                                     )
-                                } else if (fixAccuracy > 10 || accuracyRange > 25) {
+                                } /*else if (fixAccuracy > 10 || accuracyRange > 25) {
                                     AlertDialogUtility.alertDialog(
                                         this@MapsActivity,
                                         "GPS belum memenuhi syarat!",
                                         "warning.json"
                                     )
-                                } else {
+                                } */ else {
                                     AlertDialogUtility.withTwoActions(
                                         this@MapsActivity,
                                         "Batal",
@@ -617,43 +730,43 @@ open class MapsActivity : AppCompatActivity() {
                             }
                         }
 
-                        if (modelList[i].statusPk != "Sudah") {
-                            if (marker == lastClickedMarker) {
-                                mapView.overlays.remove(previousDashedLine)
-                                lastClickedMarker?.closeInfoWindow()
-                                previousDashedLine = null
-                                lastClickedMarker = null
-                                latPk = null
-                                lonPk = null
-                                tvJarakMaps.text = "-"
-                            } else {
-                                previousDashedLine?.let {
-                                    mapView.overlays.remove(it)
-                                }
-
-                                val startPoint = try {
-                                    GeoPoint(lat!!.toDouble(), lon!!.toDouble())
-                                } catch (e: Exception) {
-                                    GeoPoint(0.0, 0.0)
-                                }
-                                val endPoint = GeoPoint(modelList[i].latPk, modelList[i].lonPk)
-
-                                val points = listOf(startPoint, endPoint)
-                                val dashedLineOverlay = DashedLineOverlay(points, mapView)
-
-                                previousDashedLine = dashedLineOverlay
-                                lastClickedMarker = marker
-
-                                latPk = modelList[i].latPk
-                                lonPk = modelList[i].lonPk
-                                rangePos()
-
-                                marker.showInfoWindow()
-
-                                mapView.overlays.add(dashedLineOverlay)
-                                mapView.invalidate()
+                        /*if (modelList[i].statusPk != "Sudah") {*/
+                        if (marker == lastClickedMarker) {
+                            mapView.overlays.remove(previousDashedLine)
+                            lastClickedMarker?.closeInfoWindow()
+                            previousDashedLine = null
+                            lastClickedMarker = null
+                            latPk = null
+                            lonPk = null
+                            tvJarakMaps.text = "-"
+                        } else {
+                            previousDashedLine?.let {
+                                mapView.overlays.remove(it)
                             }
+
+                            val startPoint = try {
+                                GeoPoint(lat!!.toDouble(), lon!!.toDouble())
+                            } catch (e: Exception) {
+                                GeoPoint(0.0, 0.0)
+                            }
+                            val endPoint = GeoPoint(modelList[i].latPk, modelList[i].lonPk)
+
+                            val points = listOf(startPoint, endPoint)
+                            val dashedLineOverlay = DashedLineOverlay(points, mapView)
+
+                            previousDashedLine = dashedLineOverlay
+                            lastClickedMarker = marker
+
+                            latPk = modelList[i].latPk
+                            lonPk = modelList[i].lonPk
+                            rangePos()
+
+                            marker.showInfoWindow()
+
+                            mapView.overlays.add(dashedLineOverlay)
+                            mapView.invalidate()
                         }
+                        /*}*/
 
                         return true
                     }
@@ -1000,7 +1113,7 @@ open class MapsActivity : AppCompatActivity() {
 
             mapView.invalidate()
         } catch (e: Exception) {
-            Toasty.error(this, "Error mapview:$e", Toasty.LENGTH_SHORT).show()
+            Log.e("ET", "Error mapview: $e")
         }
     }
 
@@ -1046,6 +1159,37 @@ open class MapsActivity : AppCompatActivity() {
         }
 
         return formattedDistanceKilometers to distanceInMeters.toInt()
+    }
+
+    @SuppressLint("Range")
+    private fun getListPupuk() {
+        val selectQuery =
+            "SELECT  * FROM ${PemupukanSQL.db_tabPupuk} ORDER BY ${PemupukanSQL.db_namaPupuk} ASC"
+        val db = PemupukanSQL(this).readableDatabase
+        val i: Cursor?
+        try {
+            i = db.rawQuery(selectQuery, null)
+            if (i.moveToFirst()) {
+                do {
+                    perlakuanArray.add(
+                        try {
+                            i.getString(i.getColumnIndex(PemupukanSQL.db_namaPupuk))
+                        } catch (e: Exception) {
+                            ""
+                        }
+                    )
+                    perlakuanIdArray.add(
+                        try {
+                            i.getInt(i.getColumnIndex(PemupukanSQL.db_id))
+                        } catch (e: Exception) {
+                            0
+                        }
+                    )
+                } while (i!!.moveToNext())
+            }
+        } catch (e: SQLiteException) {
+            Log.e("ET", "Error: $e")
+        }
     }
 
     companion object {

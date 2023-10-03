@@ -45,13 +45,10 @@ import com.srs.deficiencytracker.utilities.AlertDialogUtility
 import com.srs.deficiencytracker.utilities.FileMan
 import com.srs.deficiencytracker.utilities.PrefManager
 import com.srs.deficiencytracker.utilities.PrefManagerEstate
-import com.srs.deficiencytracker.utilities.UpdateMan
 import es.dmoral.toasty.Toasty
 import kotlinx.android.synthetic.main.activity_camera.view.*
 import kotlinx.android.synthetic.main.activity_foto_temuan.view.*
 import kotlinx.android.synthetic.main.activity_handling_form.*
-import kotlinx.android.synthetic.main.activity_list_upload.clLayoutUpload
-import kotlinx.android.synthetic.main.activity_list_upload.loadingUpload
 import kotlinx.android.synthetic.main.header_form.*
 import kotlinx.android.synthetic.main.header_form.view.*
 import kotlinx.android.synthetic.main.loading_file_layout.view.logoFileLoader
@@ -67,6 +64,7 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
+import java.lang.Math.min
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -170,8 +168,8 @@ open class HandlingFormActivity : AppCompatActivity() {
         hide(sp_jenis_hand)
 
         temuanPupuk.iv_temuan1.setOnClickListener {
-            if (fotoArray.size >= 1) {
-                Toasty.warning(this, "Hanya boleh mengunggah maksimal 1 foto!").show()
+            if (fotoArray.size >= 4) {
+                Toasty.warning(this, "Hanya boleh mengunggah maksimal 4 foto!").show()
             } else {
                 if (photoTaken1) {
                     YoYo.with(Techniques.RotateInUpRight)
@@ -334,11 +332,11 @@ open class HandlingFormActivity : AppCompatActivity() {
 
                                 Toasty.success(this, "Sukses menyimpan foto!").show()
                             } else {
-                                if (fotoArray.size < 1) {
+                                if (fotoArray.size < 4) {
                                     Toasty.warning(this, "Tambahkan foto temuan!")
                                         .show()
                                 } else {
-                                    Toasty.warning(this, "Hanya boleh mengunggah maksimal 1 foto!")
+                                    Toasty.warning(this, "Hanya boleh mengunggah maksimal 4 foto!")
                                         .show()
                                 }
                             }
@@ -842,33 +840,45 @@ open class HandlingFormActivity : AppCompatActivity() {
 
                             try {
                                 val targetSizeBytes = 250 * 1024
-                                var quality = 90
+                                var quality = 100
+                                val minQuality = 50
+                                val maxWidth = 1500
 
-                                val outputStream = ByteArrayOutputStream()
-                                watermarkedBitmap.compress(
-                                    Bitmap.CompressFormat.JPEG,
-                                    quality,
-                                    outputStream
-                                )
-                                while (outputStream.size() > targetSizeBytes && quality > 0) {
-                                    quality -= 5
-                                    outputStream.reset()
-                                    watermarkedBitmap.compress(
-                                        Bitmap.CompressFormat.JPEG,
-                                        quality,
-                                        outputStream
-                                    )
+                                val sourceWidth = watermarkedBitmap.width
+                                val sourceHeight = watermarkedBitmap.height
+
+                                val maxHeight = (maxWidth.toFloat() / sourceWidth.toFloat() * sourceHeight).toInt()
+
+                                var scaledBitmap: Bitmap? = null
+
+                                while (true) {
+                                    if (quality <= minQuality || sourceWidth <= maxWidth || sourceHeight <= maxHeight) {
+                                        break
+                                    }
+
+                                    val aspectRatio = sourceWidth.toFloat() / sourceHeight.toFloat()
+                                    val newWidth = min(maxWidth, (maxHeight * aspectRatio).toInt())
+                                    scaledBitmap = Bitmap.createScaledBitmap(watermarkedBitmap, newWidth, maxHeight, true)
+
+                                    val outputStream = ByteArrayOutputStream()
+                                    scaledBitmap.compress(Bitmap.CompressFormat.JPEG, quality, outputStream)
+
+                                    if (outputStream.size() > targetSizeBytes) {
+                                        quality -= 5
+                                    } else {
+                                        break
+                                    }
                                 }
 
                                 try {
                                     val out = FileOutputStream(file)
-                                    out.write(outputStream.toByteArray())
+                                    scaledBitmap?.compress(Bitmap.CompressFormat.JPEG, quality, out)
                                     out.flush()
                                     out.close()
-                                } catch (e: java.lang.Exception) {
+                                } catch (e: Exception) {
                                     e.printStackTrace()
                                 }
-                            } catch (e: java.lang.Exception) {
+                            } catch (e: Exception) {
                                 e.printStackTrace()
                             }
 
