@@ -635,7 +635,7 @@ open class FormMapsActivity : AppCompatActivity() {
                         val intent = Intent()
                         intent.action = Settings.ACTION_APPLICATION_DETAILS_SETTINGS
                         val uri = Uri.fromParts(
-                            "co.id.ssms.mobilepro",
+                            "com.srs.deficiencytracker",
                             BuildConfig.APPLICATION_ID, null
                         )
                         intent.data = uri

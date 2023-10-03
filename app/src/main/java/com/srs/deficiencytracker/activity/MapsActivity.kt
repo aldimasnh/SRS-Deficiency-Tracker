@@ -685,13 +685,13 @@ open class MapsActivity : AppCompatActivity() {
                                         "Silakan pilih pokok kuning terlebih dahulu!",
                                         "warning.json"
                                     )
-                                } /*else if (fixAccuracy > 10 || accuracyRange > 25) {
+                                } else if (fixAccuracy > 10 || accuracyRange > 25) {
                                     AlertDialogUtility.alertDialog(
                                         this@MapsActivity,
                                         "GPS belum memenuhi syarat!",
                                         "warning.json"
                                     )
-                                } */ else {
+                                } else {
                                     AlertDialogUtility.withTwoActions(
                                         this@MapsActivity,
                                         "Batal",
@@ -922,7 +922,7 @@ open class MapsActivity : AppCompatActivity() {
                         val intent = Intent()
                         intent.action = Settings.ACTION_APPLICATION_DETAILS_SETTINGS
                         val uri = Uri.fromParts(
-                            "co.id.ssms.mobilepro",
+                            "com.srs.deficiencytracker",
                             BuildConfig.APPLICATION_ID, null
                         )
                         intent.data = uri
