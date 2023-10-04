@@ -707,7 +707,7 @@ open class MapsActivity : AppCompatActivity() {
 
                         tvBlokMaps.text = markerBloks
                         tvKondisiMaps.text = markerCon
-                        tvStatusMaps.text = modelList[i].statusPk + " ditangani"
+                        tvStatusMaps.text = modelList[i].statusPk + if (modelList[i].statusPk != "Terverifikasi") " ditangani" else ""
                         tvPokokMaps.text = "${markerIds.size}/20"
 
                         cvFUMaps.setOnClickListener {
