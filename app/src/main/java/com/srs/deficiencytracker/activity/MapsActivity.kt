@@ -31,6 +31,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.DrawableCompat
+import com.bumptech.glide.Glide
 import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.location.FusedLocationProviderClient
@@ -50,11 +51,13 @@ import com.srs.deficiencytracker.utilities.AlertDialogUtility
 import com.srs.deficiencytracker.utilities.DashedLineOverlay
 import com.srs.deficiencytracker.utilities.ModelMain
 import com.srs.deficiencytracker.utilities.PrefManager
-import com.srs.deficiencytracker.utilities.TextPolygonOverlay
 import de.mateware.snacky.Snacky
 import es.dmoral.toasty.Toasty
+import kotlinx.android.synthetic.main.activity_maps.clLayoutVerif
 import kotlinx.android.synthetic.main.activity_maps.cvCenterMaps
 import kotlinx.android.synthetic.main.activity_maps.cvFUMaps
+import kotlinx.android.synthetic.main.activity_maps.ivFUMaps
+import kotlinx.android.synthetic.main.activity_maps.loadingVerif
 import kotlinx.android.synthetic.main.activity_maps.mapView
 import kotlinx.android.synthetic.main.activity_maps.tvAccuracyMaps
 import kotlinx.android.synthetic.main.activity_maps.tvBlokMaps
@@ -64,8 +67,14 @@ import kotlinx.android.synthetic.main.activity_maps.tvKondisiMaps
 import kotlinx.android.synthetic.main.activity_maps.tvPokokMaps
 import kotlinx.android.synthetic.main.activity_maps.tvStatusMaps
 import kotlinx.android.synthetic.main.activity_maps.tvTglFotoMaps
+import kotlinx.android.synthetic.main.loading_file_layout.view.logoFileLoader
+import kotlinx.android.synthetic.main.loading_file_layout.view.lottieFileLoader
+import kotlinx.android.synthetic.main.loading_file_layout.view.tvHintFileLoader
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.json.JSONObject
-import org.osmdroid.api.IGeoPoint
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
@@ -77,6 +86,7 @@ import java.io.File
 import java.io.IOException
 import java.text.DateFormat
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import kotlin.math.atan2
@@ -103,6 +113,9 @@ open class MapsActivity : AppCompatActivity() {
     private var fixBlok = ""
 
     private val markerIds = ArrayList<Int>()
+    private val markerAfd = ArrayList<String>()
+    private val markerBlok = ArrayList<String>()
+    private val markerCons = ArrayList<String>()
 
     private var perlakuanArray = ArrayList<String>()
     private var perlakuanIdArray = ArrayList<Int>()
@@ -127,10 +140,32 @@ open class MapsActivity : AppCompatActivity() {
     private var latPk: Double? = null
     private var lonPk: Double? = null
 
+    private val coroutineScope = CoroutineScope(Dispatchers.Main)
+    private var inserting = false
+
+    val jobTitles = listOf("Manager", "QC", "Head", "COO", "CEO", "PA")
+
     @SuppressLint("SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_maps)
+
+        val prefManager = PrefManager(this)
+        if (jobTitles.any { prefManager.jabatan?.contains(it) == true }) {
+            ivFUMaps.setImageResource(R.drawable.baseline_checklist_24)
+        }
+
+        Glide.with(this)//GLIDE LOGO FOR LOADING LAYOUT
+            .load(R.drawable.logo_png_white)
+            .into(loadingVerif.logoFileLoader)
+        Glide.with(this)//GLIDE LOGO FOR LOADING LAYOUT
+            .load(R.drawable.ssms_green)
+            .into(loadingVerif.logoFileLoader)
+        loadingVerif.lottieFileLoader.setAnimation("loading_circle.json")//ANIMATION WITH LOTTIE FOR LOADING LAYOUT
+        @Suppress("DEPRECATION")
+        loadingVerif.lottieFileLoader.loop(true)
+        loadingVerif.lottieFileLoader.playAnimation()
+        loadingVerif.tvHintFileLoader.text = "Mohon ditunggu, sedang memproses"
 
         getIdPk = getDataIntent("idPk")
         getEst = getDataIntent("est")
@@ -181,8 +216,6 @@ open class MapsActivity : AppCompatActivity() {
                 } else if (getBlokPlot.length == 6) {
                     fixBlok = getBlokPlot.substring(0, getBlokPlot.length - 3)
                 }
-            } else if (getEst == "BDE") {
-                fixBlok = getBlokPlot.substring(0, getBlokPlot.length - 3)
             } else if (getBlokPlot.length == 8) {
                 val replace = getBlokPlot.replaceRange(1, 2, "")
                 val sliced = replace.substring(0, replace.length - 2)
@@ -215,7 +248,7 @@ open class MapsActivity : AppCompatActivity() {
         }
 
         val blokArray = ArrayList<String>()
-        val latlnValues = ArrayList<IGeoPoint>()
+        val latlnValues = ArrayList<GeoPoint>()
         val coordinates = mutableListOf<List<GeoPoint>>()
         var currentCoordinateList = mutableListOf<GeoPoint>()
         val mapsPath = this.getExternalFilesDir(null)?.absolutePath + "/MAIN/maps" + urlCategory
@@ -330,22 +363,12 @@ open class MapsActivity : AppCompatActivity() {
             Log.d("ET", "The JSON file maps does not exist.")
         }
 
-        var avgLat = 0.0
-        var avgLon = 0.0
-
-        for (geoPoint in latlnValues) {
-            avgLat += geoPoint.latitude
-            avgLon += geoPoint.longitude
-        }
-
-        avgLat /= latlnValues.size
-        avgLon /= latlnValues.size
-
+        val mapsCenter = calculateCenter(latlnValues)
         val geoPoint =
             if (firstGPS) {
                 GeoPoint(lat!!.toDouble(), lon!!.toDouble())
-            } else if (!avgLat.isNaN()) {
-                GeoPoint(avgLat, avgLon)
+            } else if (mapsCenter != null) {
+                mapsCenter
             } else {
                 val currentPos = getPos.split("$")
                 GeoPoint(currentPos[0].toDouble(), currentPos[1].toDouble())
@@ -361,21 +384,11 @@ open class MapsActivity : AppCompatActivity() {
             polygon.strokeColor = 0xFF000000.toInt() // Stroke color (black)
             polygon.strokeWidth = 2f
 
-            var avgLatBlok = 0.0
-            var avgLonBlok = 0.0
+            val markerText = Marker(mapView)
+            markerText.position = calculateCenter(coordinates[i])
+            markerText.setTextIcon(blokArray[i])
+            mapView.overlays.add(markerText)
 
-            for (geoBlok in coordinates[i]) {
-                avgLatBlok += geoBlok.latitude
-                avgLonBlok += geoBlok.longitude
-            }
-
-            avgLatBlok /= coordinates[i].size
-            avgLonBlok /= coordinates[i].size
-
-            val textOverlay =
-                TextPolygonOverlay(mapView, GeoPoint(avgLatBlok, avgLonBlok), blokArray[i])
-
-            mapView.overlays.add(textOverlay)
             mapView.overlays.add(polygon)
             mapView.invalidate()
         }
@@ -543,6 +556,8 @@ open class MapsActivity : AppCompatActivity() {
     @SuppressLint("SetTextI18n", "ResourceType")
     private fun initMarker(modelList: List<ModelMain>) {
         runOnUiThread {
+            val prefManager = PrefManager(this)
+
             val arrBelum = ArrayList<Int>()
             val arrSudah = ArrayList<Int>()
 
@@ -556,14 +571,19 @@ open class MapsActivity : AppCompatActivity() {
 
             for (i in modelList.indices) {
                 var selectedIcon =
-                    ContextCompat.getDrawable(this, R.drawable.baseline_close_circle_24)
+                    ContextCompat.getDrawable(
+                        this,
+                        if (modelList[i].statusPk == "Sudah") R.drawable.baseline_check_circle_24 else R.drawable.baseline_close_circle_24
+                    )
                 var drawable = ContextCompat.getDrawable(
                     this,
-                    if (modelList[i].statusPk == "Sudah") R.drawable.baseline_circle_24 else R.drawable.ic_close
+                    if (modelList[i].statusPk == "Terverifikasi") R.drawable.baseline_check_circle_24 else if (modelList[i].statusPk == "Sudah") R.drawable.baseline_circle_24 else R.drawable.ic_close
                 )
                 val color = ContextCompat.getColor(
                     this,
-                    if (modelList[i].statusPk == "Sudah") {
+                    if (modelList[i].statusPk == "Terverifikasi") {
+                        R.color.colorGreen_A400
+                    } else if (modelList[i].statusPk == "Sudah") {
                         R.color.green1
                     } else if (modelList[i].kondisiPk == "Pucat") {
                         R.color.grey_default
@@ -576,8 +596,8 @@ open class MapsActivity : AppCompatActivity() {
                 drawable?.setColorFilter(color, PorterDuff.Mode.SRC_ATOP)
                 selectedIcon?.setColorFilter(color, PorterDuff.Mode.SRC_ATOP)
 
-                val widthInPixels = if (modelList[i].statusPk == "Sudah") 50 else 100
-                val heightInPixels = if (modelList[i].statusPk == "Sudah") 50 else 100
+                val widthInPixels = 100
+                val heightInPixels = 100
                 val bitmap =
                     Bitmap.createBitmap(widthInPixels, heightInPixels, Bitmap.Config.ARGB_8888)
                 val canvas = Canvas(bitmap)
@@ -585,13 +605,6 @@ open class MapsActivity : AppCompatActivity() {
                 selectedIcon?.setBounds(0, 0, widthInPixels, heightInPixels)
                 selectedIcon?.draw(canvas)
                 selectedIcon = BitmapDrawable(resources, bitmap)
-
-                // Resize icon status sudah ditangani
-                if (modelList[i].statusPk == "Sudah") {
-                    drawable?.setBounds(0, 0, widthInPixels, heightInPixels)
-                    drawable?.draw(canvas)
-                    drawable = BitmapDrawable(resources, bitmap)
-                }
 
                 val resultAction = ArrayList<String>()
                 val splitPerlakuan = modelList[i].perlakuanPk.split("$")
@@ -651,29 +664,49 @@ open class MapsActivity : AppCompatActivity() {
                         marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
 
                         val markerId = modelList[i].idPk
-                        if (modelList[i].statusPk == "Belum") {
+                        val markerAfdl = modelList[i].afdPk
+                        val markerBloks = modelList[i].blokPk
+                        val markerCon = modelList[i].kondisiPk
+                        if ((modelList[i].statusPk == "Belum" && jobTitles.none {
+                                prefManager.jabatan?.contains(
+                                    it
+                                ) == true
+                            }) || (modelList[i].statusPk == "Sudah" && jobTitles.any {
+                                prefManager.jabatan?.contains(
+                                    it
+                                ) == true
+                            })) {
                             if (markerIds.size < 20 || markerIds.contains(markerId)) {
                                 if (markerIds.contains(markerId)) {
                                     markerIds.remove(markerId)
+                                    markerAfd.remove(markerAfdl)
+                                    markerBlok.remove(markerBloks)
+                                    markerCons.remove(markerCon)
                                     marker.icon = drawable
                                 } else {
                                     if (markerIds.size == 20) {
                                         markerIds.remove(markerId)
+                                        markerAfd.remove(markerAfdl)
+                                        markerBlok.remove(markerBloks)
+                                        markerCons.remove(markerCon)
                                         marker.icon = drawable
                                     }
                                     markerIds.add(markerId)
+                                    markerAfd.add(markerAfdl)
+                                    markerBlok.add(markerBloks)
+                                    markerCons.add(markerCon)
                                     marker.icon = selectedIcon
                                 }
                             } else {
                                 Toasty.warning(
                                     this@MapsActivity,
-                                    "Maksimal hanya dapat menangani 20 titik!"
+                                    if (jobTitles.any { prefManager.jabatan?.contains(it) == true }) "Maksimal hanya dapat memverifikasi 20 titik!" else "Maksimal hanya dapat menangani 20 titik!"
                                 ).show()
                             }
                         }
 
-                        tvBlokMaps.text = modelList[i].blokPk
-                        tvKondisiMaps.text = modelList[i].kondisiPk
+                        tvBlokMaps.text = markerBloks
+                        tvKondisiMaps.text = markerCon
                         tvStatusMaps.text = modelList[i].statusPk + " ditangani"
                         tvPokokMaps.text = "${markerIds.size}/20"
 
@@ -691,6 +724,28 @@ open class MapsActivity : AppCompatActivity() {
                                         "GPS belum memenuhi syarat!",
                                         "warning.json"
                                     )
+                                } else if (jobTitles.any { prefManager.jabatan?.contains(it) == true }) {
+                                    AlertDialogUtility.withTwoActions(
+                                        this@MapsActivity,
+                                        "Batal",
+                                        "Ya",
+                                        "Apakah anda yakin untuk melakukan verifikasi?",
+                                        "warning.json"
+                                    ) {
+                                        inserting = true
+                                        clLayoutVerif.visibility = View.VISIBLE
+
+                                        coroutineScope.launch {
+                                            withContext(Dispatchers.IO) {
+                                                insertData()
+                                            }
+
+                                            withContext(Dispatchers.Main) {
+                                                clLayoutVerif.visibility = View.GONE
+                                                inserting = false
+                                            }
+                                        }
+                                    }
                                 } else {
                                     AlertDialogUtility.withTwoActions(
                                         this@MapsActivity,
@@ -699,6 +754,9 @@ open class MapsActivity : AppCompatActivity() {
                                         "Apakah anda yakin untuk melakukan penanganan?",
                                         "warning.json"
                                     ) {
+                                        stopLocationUpdates()
+                                        mapView.onPause()
+
                                         val intent =
                                             Intent(
                                                 this@MapsActivity,
@@ -712,9 +770,27 @@ open class MapsActivity : AppCompatActivity() {
                                                         .replace(",", "$")
                                                 )
                                                 .putExtra("est", getEst)
-                                                .putExtra("afd", modelList[i].afdPk)
-                                                .putExtra("blok", modelList[i].blokPk)
-                                                .putExtra("kondisi", modelList[i].kondisiPk)
+                                                .putExtra(
+                                                    "afd",
+                                                    markerAfd.toTypedArray().contentToString()
+                                                        .replace("[", "").replace("]", "")
+                                                        .replace(" ", "")
+                                                        .replace(",", "$")
+                                                )
+                                                .putExtra(
+                                                    "blok",
+                                                    markerBlok.toTypedArray().contentToString()
+                                                        .replace("[", "").replace("]", "")
+                                                        .replace(" ", "")
+                                                        .replace(",", "$")
+                                                )
+                                                .putExtra(
+                                                    "kondisi",
+                                                    markerCons.toTypedArray().contentToString()
+                                                        .replace("[", "").replace("]", "")
+                                                        .replace(" ", "")
+                                                        .replace(",", "$")
+                                                )
                                                 .putExtra("gps", "GA")
                                         startActivity(intent)
                                         finishAffinity()
@@ -730,7 +806,6 @@ open class MapsActivity : AppCompatActivity() {
                             }
                         }
 
-                        /*if (modelList[i].statusPk != "Sudah") {*/
                         if (marker == lastClickedMarker) {
                             mapView.overlays.remove(previousDashedLine)
                             lastClickedMarker?.closeInfoWindow()
@@ -766,7 +841,6 @@ open class MapsActivity : AppCompatActivity() {
                             mapView.overlays.add(dashedLineOverlay)
                             mapView.invalidate()
                         }
-                        /*}*/
 
                         return true
                     }
@@ -774,6 +848,133 @@ open class MapsActivity : AppCompatActivity() {
 
                 mapView.overlays.add(marker)
                 mapView.invalidate()
+            }
+        }
+    }
+
+    private fun insertData() {
+        val databaseHandler = PemupukanSQL(this)
+        val splitIdPk = markerIds.toTypedArray().contentToString()
+            .replace("[", "").replace("]", "")
+            .replace(" ", "")
+            .replace(",", "$").split("$")
+        val splitAfdPk = markerAfd.toTypedArray().contentToString()
+            .replace("[", "").replace("]", "")
+            .replace(" ", "")
+            .replace(",", "$").split("$")
+        val splitBlokPk = markerBlok.toTypedArray().contentToString()
+            .replace("[", "").replace("]", "")
+            .replace(" ", "")
+            .replace(",", "$").split("$")
+        val splitConsPk = markerCons.toTypedArray().contentToString()
+            .replace("[", "").replace("]", "")
+            .replace(" ", "")
+            .replace(",", "$").split("$")
+        for (a in splitIdPk.indices) {
+            if (splitIdPk[a].isNotEmpty()) {
+                val dateNow = SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(
+                    Calendar.getInstance().time
+                )
+
+                val status = databaseHandler.addPokokKuning(
+                    idPk = splitIdPk[a].toInt(),
+                    estate = getEst,
+                    afdeling = splitAfdPk[a],
+                    blok = splitBlokPk[a],
+                    status = "Terverifikasi",
+                    kondisi = splitConsPk[a],
+                    datetime = dateNow,
+                    jenisPupukId = "",
+                    foto = "",
+                    komen = "",
+                    app_ver = ""
+                )
+
+                if (status > -1) {
+                    val pkPath =
+                        this.getExternalFilesDir(null)?.absolutePath + "/MAIN/pk" + PrefManager(
+                            this
+                        ).dataReg!!
+                    val fileMaps = File(pkPath)
+                    if (fileMaps.exists()) {
+                        try {
+                            val readMaps = fileMaps.readText()
+                            val objMaps = JSONObject(readMaps)
+
+                            val estObjMaps =
+                                objMaps.getJSONObject(getEst)
+                            val afdObjMaps =
+                                estObjMaps.getJSONObject(splitAfdPk[a])
+                            val blokObjMaps =
+                                afdObjMaps.getJSONObject(splitBlokPk[a])
+                            for (index in blokObjMaps.keys()) {
+                                val item =
+                                    blokObjMaps.getJSONObject(index)
+                                if (splitIdPk[a] == index) {
+                                    item.put("status", "Terverifikasi")
+                                    item.put("tanggal", dateNow)
+                                    fileMaps.writeText(objMaps.toString())
+                                }
+                            }
+
+                            if (a == splitIdPk.size - 1) {
+                                inserting = false
+                                runOnUiThread {
+                                    stopLocationUpdates()
+                                    if (mapView != null) {
+                                        mapView.onPause()
+                                    }
+
+                                    AlertDialogUtility.withSingleAction(
+                                        this,
+                                        "OK",
+                                        "Pemupukan Pokok Kuning telah tersimpan!",
+                                        "success.json"
+                                    ) {
+                                        val intent =
+                                            Intent(
+                                                this,
+                                                MainActivity::class.java
+                                            )
+                                        startActivity(intent)
+                                        finishAffinity()
+                                    }
+                                }
+                            }
+                        } catch (e: Exception) {
+                            inserting = false
+                            runOnUiThread {
+                                AlertDialogUtility.alertDialog(
+                                    this,
+                                    "Terjadi kesalahan, hubungi pengembang. Error: $e",
+                                    "warning.json"
+                                )
+                            }
+                            e.printStackTrace()
+                            break
+                        }
+                    } else {
+                        inserting = false
+                        runOnUiThread {
+                            AlertDialogUtility.alertDialog(
+                                this,
+                                "File JSON tidak ditemukan!",
+                                "warning.json"
+                            )
+                        }
+                        break
+                    }
+                } else {
+                    inserting = false
+                    runOnUiThread {
+                        AlertDialogUtility.alertDialog(
+                            this,
+                            "Terjadi kesalahan, hubungi pengembang",
+                            "warning.json"
+                        )
+                    }
+                    break
+                }
             }
         }
     }
@@ -819,6 +1020,9 @@ open class MapsActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         stopLocationUpdates()
+        if (mapView != null) {
+            mapView.onPause()
+        }
     }
 
     @Deprecated("Deprecated in Java")
@@ -831,6 +1035,10 @@ open class MapsActivity : AppCompatActivity() {
             "warning.json"
         ) {
             stopLocationUpdates()
+            if (mapView != null) {
+                mapView.onPause()
+            }
+
             val intent = Intent(this, MainActivity::class.java)
             startActivity(intent)
             finishAffinity()
@@ -1190,6 +1398,45 @@ open class MapsActivity : AppCompatActivity() {
         } catch (e: SQLiteException) {
             Log.e("ET", "Error: $e")
         }
+    }
+
+    private fun calculateCenter(geoPoints: List<GeoPoint>): GeoPoint? {
+        if (geoPoints.isEmpty()) {
+            return null
+        }
+
+        var latMax = 0.0
+        var latMin = 0.0
+        var lonMax = 0.0
+        var lonMin = 0.0
+        var first = true
+
+        for (geoBlok in geoPoints) {
+            if (first) {
+                latMax = geoBlok.latitude
+                latMin = geoBlok.latitude
+                lonMax = geoBlok.longitude
+                lonMin = geoBlok.longitude
+                first = false
+            } else {
+                if (latMax < geoBlok.latitude) {
+                    latMax = geoBlok.latitude
+                } else if (latMin > geoBlok.latitude) {
+                    latMin = geoBlok.latitude
+                }
+
+                if (lonMax < geoBlok.longitude) {
+                    lonMax = geoBlok.longitude
+                } else if (lonMin > geoBlok.longitude) {
+                    lonMin = geoBlok.longitude
+                }
+            }
+        }
+
+        val latCen = (latMax + latMin) / 2
+        val lonCen = (lonMax + lonMin) / 2
+
+        return GeoPoint(latCen, lonCen)
     }
 
     companion object {

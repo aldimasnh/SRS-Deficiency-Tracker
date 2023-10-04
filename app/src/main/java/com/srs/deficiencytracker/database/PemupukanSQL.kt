@@ -97,6 +97,7 @@ class PemupukanSQL(context: Context) : SQLiteOpenHelper(
         estate: String,
         afdeling: String,
         blok: String,
+        status: String,
         kondisi: String,
         datetime: String,
         jenisPupukId: String,
@@ -110,7 +111,7 @@ class PemupukanSQL(context: Context) : SQLiteOpenHelper(
         contentValues.put(db_estate, estate)
         contentValues.put(db_afdeling, afdeling)
         contentValues.put(db_blok, blok)
-        contentValues.put(db_status, "Sudah")
+        contentValues.put(db_status, status)
         contentValues.put(db_kondisi, kondisi)
         contentValues.put(db_datetime, datetime)
         contentValues.put(db_jenisPupukID, jenisPupukId)

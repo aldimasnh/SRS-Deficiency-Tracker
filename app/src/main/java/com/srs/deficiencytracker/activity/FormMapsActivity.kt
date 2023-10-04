@@ -490,6 +490,8 @@ open class FormMapsActivity : AppCompatActivity() {
                     Toasty.warning(this, "Tidak ada data pokok kuning!", Toasty.LENGTH_LONG).show()
                 } else {
                     if (firstGPS) {
+                        stopLocationUpdates()
+
                         pm.estate = est
                         pm.afdeling = afd
                         pm.blok = blok

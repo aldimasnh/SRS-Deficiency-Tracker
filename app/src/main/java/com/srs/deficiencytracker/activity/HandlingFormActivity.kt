@@ -117,7 +117,7 @@ open class HandlingFormActivity : AppCompatActivity() {
     private var isFlashlightOn = false
 
     private val coroutineScope = CoroutineScope(Dispatchers.Main)
-    var inserting = false
+    private var inserting = false
 
     @SuppressLint("SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -406,21 +406,28 @@ open class HandlingFormActivity : AppCompatActivity() {
 
         val databaseHandler = PemupukanSQL(this)
         val splitIdPk = getIdPk.split("$")
+        val splitAfdPk = getAfd.split("$")
+        val splitBlokPk = getBlok.split("$")
+        val splitConsPk = getCons.split("$")
         for (a in splitIdPk.indices) {
             if (splitIdPk[a].isNotEmpty()) {
+                val dateNow = SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(
+                    Calendar.getInstance().time
+                )
+                val resultPerlakuan = selectedPerlakuanIdArray.toTypedArray()
+                    .contentToString().replace("[", "")
+                    .replace("]", "").replace(" ", "")
+                    .replace(",", "$")
+
                 val status = databaseHandler.addPokokKuning(
                     idPk = splitIdPk[a].toInt(),
                     estate = getEst,
-                    afdeling = getAfd,
-                    blok = getBlok,
-                    kondisi = getCons,
-                    datetime = SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(
-                        Calendar.getInstance().time
-                    ),
-                    jenisPupukId = selectedPerlakuanIdArray.toTypedArray()
-                        .contentToString().replace("[", "")
-                        .replace("]", "").replace(" ", "")
-                        .replace(",", "$"),
+                    afdeling = splitAfdPk[a],
+                    blok = splitBlokPk[a],
+                    status = "Sudah",
+                    kondisi = splitConsPk[a],
+                    datetime = dateNow,
+                    jenisPupukId = resultPerlakuan,
                     foto = fname.replace("[", "").replace("]", "")
                         .replace(",", "$").replace(" ", ""),
                     komen = komenResult,
@@ -441,14 +448,16 @@ open class HandlingFormActivity : AppCompatActivity() {
                             val estObjMaps =
                                 objMaps.getJSONObject(getEst)
                             val afdObjMaps =
-                                estObjMaps.getJSONObject(getAfd)
+                                estObjMaps.getJSONObject(splitAfdPk[a])
                             val blokObjMaps =
-                                afdObjMaps.getJSONObject(getBlok)
+                                afdObjMaps.getJSONObject(splitBlokPk[a])
                             for (index in blokObjMaps.keys()) {
                                 val item =
                                     blokObjMaps.getJSONObject(index)
                                 if (splitIdPk[a] == index) {
                                     item.put("status", "Sudah")
+                                    item.put("tanggal", dateNow)
+                                    item.put("perlakuan", resultPerlakuan)
                                     fileMaps.writeText(objMaps.toString())
                                 }
                             }
@@ -732,9 +741,11 @@ open class HandlingFormActivity : AppCompatActivity() {
                         }
                     }
 
+                    val splitAfdPk = getAfd.split("$")
+                    val splitBlokPk = getBlok.split("$")
                     dateFormat =
                         SimpleDateFormat("yyyyMdd_HHmmss").format(Calendar.getInstance().time) //nentuin tanggal dan jam
-                    var pictureFile = "PK_${dateFormat}_${getEst}_${getAfd}_${getBlok}"
+                    var pictureFile = "PK_${dateFormat}_${getEst}_${splitAfdPk[splitAfdPk.lastIndex]}_${splitBlokPk[splitBlokPk.lastIndex]}"
 
                     selectedSize?.let { size ->
                         val surfaceTexture = textureViewCam.surfaceTexture
@@ -833,7 +844,7 @@ open class HandlingFormActivity : AppCompatActivity() {
                             }
                             val watermarkedBitmap = addWatermark(
                                 bitmap,
-                                "POKOK KUNING/$getEst/$getAfd/$getBlok\n${
+                                "POKOK KUNING/$getEst/${splitAfdPk[splitAfdPk.lastIndex]}/${splitBlokPk[splitBlokPk.lastIndex]}\n${
                                     fixWmDt
                                 }\n$dateWM"
                             )

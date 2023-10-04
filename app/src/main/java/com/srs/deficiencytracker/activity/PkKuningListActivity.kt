@@ -91,7 +91,7 @@ class PkKuningListActivity : AppCompatActivity() {
 
     //upload
     private val urlCekFoto = "https://srs-ssms.com/deficiency_tracker/checkFotoTracker.php"
-    private val urlInsert = "https://srs-ssms.com/deficiency_tracker/postDataTracker1.php"
+    private val urlInsert = "https://srs-ssms.com/deficiency_tracker/postDataTracker2.php"
     var serverURL: String = "https://srs-ssms.com/deficiency_tracker/recordFotoTracker.php"
     private val client = OkHttpClient()
 
@@ -561,6 +561,7 @@ class PkKuningListActivity : AppCompatActivity() {
             override fun getParams(): Map<String, String> {
                 val params: MutableMap<String, String> =
                     HashMap()
+                params["jabatan"] = PrefManager(this@PkKuningListActivity).jabatan!!
                 params["petugas"] = PrefManager(this@PkKuningListActivity).name!!
                 params[db_idPk] = idPkUp.toString()
                 params[db_estate] = estUp
