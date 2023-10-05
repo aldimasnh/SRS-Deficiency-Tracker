@@ -815,30 +815,26 @@ open class MapsActivity : AppCompatActivity() {
                             lonPk = null
                             tvJarakMaps.text = "-"
                         } else {
-                            previousDashedLine?.let {
-                                mapView.overlays.remove(it)
-                            }
-
-                            val startPoint = try {
-                                GeoPoint(lat!!.toDouble(), lon!!.toDouble())
+                            val latCurrent = try {
+                                lat!!.toDouble()
                             } catch (e: Exception) {
-                                GeoPoint(0.0, 0.0)
+                                0.0
                             }
-                            val endPoint = GeoPoint(modelList[i].latPk, modelList[i].lonPk)
+                            val lonCurrent = try {
+                                lon!!.toDouble()
+                            } catch (e: Exception) {
+                                0.0
+                            }
 
-                            val points = listOf(startPoint, endPoint)
-                            val dashedLineOverlay = DashedLineOverlay(points, mapView)
-
-                            previousDashedLine = dashedLineOverlay
                             lastClickedMarker = marker
 
                             latPk = modelList[i].latPk
                             lonPk = modelList[i].lonPk
+
+                            createDashLineOverlay(latCurrent, lonCurrent, latPk!!, lonPk!!)
                             rangePos()
 
                             marker.showInfoWindow()
-
-                            mapView.overlays.add(dashedLineOverlay)
                             mapView.invalidate()
                         }
 
@@ -1214,6 +1210,9 @@ open class MapsActivity : AppCompatActivity() {
                 }
 
                 updateMarkerPosition(lat!!.toDouble(), lon!!.toDouble())
+                if (latPk != null) {
+                    createDashLineOverlay(lat!!.toDouble(), lon!!.toDouble(), latPk!!, lonPk!!)
+                }
             }
 
             val accuracyInMeters = mCurrentLocation!!.accuracy
@@ -1281,6 +1280,27 @@ open class MapsActivity : AppCompatActivity() {
                 }
                 updateLocationUI()
             }
+    }
+
+    private fun createDashLineOverlay(newLat: Double, newLng: Double, latPk: Double, lonPk: Double) {
+        try {
+            previousDashedLine?.let {
+                mapView.overlays.remove(it)
+            }
+
+            val startPoint = GeoPoint(newLat, newLng)
+            val endPoint = GeoPoint(latPk, lonPk)
+
+            val points = listOf(startPoint, endPoint)
+            val dashedLineOverlay = DashedLineOverlay(points, mapView)
+
+            previousDashedLine = dashedLineOverlay
+
+            mapView.overlays.add(dashedLineOverlay)
+            mapView.invalidate()
+        } catch (e: Exception) {
+            Log.e("ET", "Error dash line: $e")
+        }
     }
 
     private fun updateMarkerPosition(newLat: Double, newLng: Double) {
