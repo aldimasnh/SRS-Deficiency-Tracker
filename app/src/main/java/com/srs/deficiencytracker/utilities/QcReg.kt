@@ -25,6 +25,7 @@ const val urlGet = "https://srs-ssms.com/getListDataRegional.php"
 class QcReg : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        UpdateMan().hideStatusNavigationBar(window)
         setContentView(R.layout.activity_qc_reg)
 
         Glide.with(this)//GLIDE LOGO FOR LOADING LAYOUT

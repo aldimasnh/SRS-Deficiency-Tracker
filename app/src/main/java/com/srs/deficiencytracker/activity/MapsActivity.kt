@@ -51,6 +51,7 @@ import com.srs.deficiencytracker.utilities.AlertDialogUtility
 import com.srs.deficiencytracker.utilities.DashedLineOverlay
 import com.srs.deficiencytracker.utilities.ModelMain
 import com.srs.deficiencytracker.utilities.PrefManager
+import com.srs.deficiencytracker.utilities.UpdateMan
 import de.mateware.snacky.Snacky
 import es.dmoral.toasty.Toasty
 import kotlinx.android.synthetic.main.activity_maps.clLayoutVerif
@@ -148,6 +149,7 @@ open class MapsActivity : AppCompatActivity() {
     @SuppressLint("SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        UpdateMan().hideStatusNavigationBar(window)
         setContentView(R.layout.activity_maps)
 
         val prefManager = PrefManager(this)
@@ -640,7 +642,7 @@ open class MapsActivity : AppCompatActivity() {
                 marker.title = if (modelList[i].statusPk == "Belum") {
                     modelList[i].idPk.toString()
                 } else {
-                    "$getEst - ${modelList[i].afdPk}"
+                    modelList[i].idPk.toString() + "\n$getEst - ${modelList[i].afdPk}"
                 }
                 marker.snippet = if (modelList[i].statusPk == "Belum") {
                     "$getEst - ${modelList[i].afdPk}"
@@ -909,9 +911,9 @@ open class MapsActivity : AppCompatActivity() {
                                 if (splitIdPk[a] == index) {
                                     item.put("status", "Terverifikasi")
                                     item.put("tanggal", dateNow)
-                                    fileMaps.writeText(objMaps.toString())
                                 }
                             }
+                            fileMaps.writeText(objMaps.toString())
 
                             if (a == splitIdPk.size - 1) {
                                 inserting = false

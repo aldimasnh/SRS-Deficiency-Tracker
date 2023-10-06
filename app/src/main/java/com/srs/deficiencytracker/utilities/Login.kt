@@ -65,6 +65,7 @@ class Login : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        UpdateMan().hideStatusNavigationBar(window)
         setContentView(R.layout.activity_login)
         tvRegister.visibility = View.GONE
         setTampilan()

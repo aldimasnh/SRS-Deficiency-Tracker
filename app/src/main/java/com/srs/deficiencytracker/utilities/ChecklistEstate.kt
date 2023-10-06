@@ -29,6 +29,7 @@ class ChecklistEstate : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        UpdateMan().hideStatusNavigationBar(window)
         setContentView(R.layout.activity_checklist_est)
 
         getSync = try {

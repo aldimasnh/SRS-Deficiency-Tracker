@@ -46,6 +46,7 @@ class MainActivity : AppCompatActivity() {
     @SuppressLint("SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        UpdateMan().hideStatusNavigationBar(window)
         setContentView(R.layout.activity_main)
 
         tv_ver_header.text = "App ver: ${BuildConfig.VERSION_NAME}"

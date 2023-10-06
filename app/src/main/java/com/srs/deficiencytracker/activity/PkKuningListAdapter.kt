@@ -84,9 +84,11 @@ class PkKuningListAdapter(
                                 blokObjMaps.getJSONObject(index)
                             if (idPk[pos].toString() == index) {
                                 item.put("status", "Belum")
-                                fileMaps.writeText(objMaps.toString())
+                                item.remove("tanggal")
+                                item.remove("perlakuan")
                             }
                         }
+                        fileMaps.writeText(objMaps.toString())
 
                         val db = PemupukanSQL(context).readableDatabase
                         val rowsDeleted = db.delete(

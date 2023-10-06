@@ -36,6 +36,7 @@ import com.srs.deficiencytracker.utilities.FileMan
 import com.srs.deficiencytracker.utilities.ModelMain
 import com.srs.deficiencytracker.utilities.PrefManager
 import com.srs.deficiencytracker.utilities.PrefManagerEstate
+import com.srs.deficiencytracker.utilities.UpdateMan
 import de.mateware.snacky.Snacky
 import es.dmoral.toasty.Toasty
 import kotlinx.android.synthetic.main.activity_form_est.cvNext
@@ -97,6 +98,7 @@ open class FormMapsActivity : AppCompatActivity() {
     @SuppressLint("SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        UpdateMan().hideStatusNavigationBar(window)
         setContentView(R.layout.activity_form_est)
 
         val pm = PrefManagerEstate(this@FormMapsActivity)

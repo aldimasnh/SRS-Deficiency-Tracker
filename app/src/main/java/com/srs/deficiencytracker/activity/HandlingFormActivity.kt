@@ -45,6 +45,7 @@ import com.srs.deficiencytracker.utilities.AlertDialogUtility
 import com.srs.deficiencytracker.utilities.FileMan
 import com.srs.deficiencytracker.utilities.PrefManager
 import com.srs.deficiencytracker.utilities.PrefManagerEstate
+import com.srs.deficiencytracker.utilities.UpdateMan
 import es.dmoral.toasty.Toasty
 import kotlinx.android.synthetic.main.activity_camera.view.*
 import kotlinx.android.synthetic.main.activity_foto_temuan.view.*
@@ -122,6 +123,7 @@ open class HandlingFormActivity : AppCompatActivity() {
     @SuppressLint("SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        UpdateMan().hideStatusNavigationBar(window)
         setContentView(R.layout.activity_handling_form)
 
         getIdPk = getDataIntent("id")
@@ -458,9 +460,9 @@ open class HandlingFormActivity : AppCompatActivity() {
                                     item.put("status", "Sudah")
                                     item.put("tanggal", dateNow)
                                     item.put("perlakuan", resultPerlakuan)
-                                    fileMaps.writeText(objMaps.toString())
                                 }
                             }
+                            fileMaps.writeText(objMaps.toString())
 
                             if (a == splitIdPk.size - 1) {
                                 inserting = false

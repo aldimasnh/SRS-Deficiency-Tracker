@@ -228,6 +228,7 @@ class PkKuningListActivity : AppCompatActivity() {
     @SuppressLint("SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        UpdateMan().hideStatusNavigationBar(window)
         setContentView(R.layout.activity_list_upload)
         urlCategory = PrefManager(this).dataReg!!
         tv_ver_header.text = "App ver: ${BuildConfig.VERSION_NAME}"
