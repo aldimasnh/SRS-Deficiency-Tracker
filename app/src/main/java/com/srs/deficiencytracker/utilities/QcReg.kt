@@ -4,17 +4,13 @@ import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.view.View
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.android.volley.Response
 import com.android.volley.toolbox.StringRequest
 import com.android.volley.toolbox.Volley
 import com.bumptech.glide.Glide
-import com.srs.deficiencytracker.MainActivity
 import com.srs.deficiencytracker.R
 import es.dmoral.toasty.Toasty
-import kotlinx.android.synthetic.main.activity_login.logo_ssms
-import kotlinx.android.synthetic.main.activity_login.lottie
 import kotlinx.android.synthetic.main.activity_qc_reg.*
 import kotlinx.android.synthetic.main.panen_spinner.view.*
 import org.json.JSONException
@@ -25,6 +21,7 @@ const val urlGet = "https://srs-ssms.com/getListDataRegional.php"
 class QcReg : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        UpdateMan().transparentStatusNavBar(window)
         setContentView(R.layout.activity_qc_reg)
 
         Glide.with(this)//GLIDE LOGO FOR LOADING LAYOUT

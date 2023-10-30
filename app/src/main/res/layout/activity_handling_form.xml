@@ -34,53 +34,34 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:paddingHorizontal="100dp"
+            android:paddingHorizontal="20dp"
             app:layout_constraintTop_toBottomOf="@+id/header_hand">
 
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:fontFamily="@font/seguisb"
-                android:text="Jenis Pupuk:"
+                android:text="Jenis Perlakuan:"
                 android:textSize="20sp" />
+
+            <EditText
+                android:id="@+id/searchEditText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Search..."/>
 
             <com.jaredrummler.materialspinner.MaterialSpinner
                 android:id="@+id/sp_jenis_hand"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:ms_hint="Pilih Arah" />
+                app:ms_hint="Pilih perlakuan"/>
 
-            <TextView
-                android:layout_marginTop="10dp"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:fontFamily="@font/seguisb"
-                android:text="Dosis Pupuk:"
-                android:textSize="20sp"
-                app:layout_constraintTop_toBottomOf="@+id/sp_tph_est" />
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/chip_hand"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content">
 
-            <EditText
-                android:id="@+id/et_dosis_hand"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center"
-                android:hint="4.6"
-                android:inputType="numberDecimal"
-                android:textColorHint="#D1D1D1" />
-
-            <TextView
-                android:layout_marginTop="10dp"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:fontFamily="@font/seguisb"
-                android:text="Metode:"
-                android:textSize="20sp" />
-
-            <com.jaredrummler.materialspinner.MaterialSpinner
-                android:id="@+id/sp_metode_hand"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                app:ms_hint="Pilih Arah" />
+            </com.google.android.material.chip.ChipGroup>
 
         </LinearLayout>
 
@@ -110,5 +91,21 @@
         android:id="@+id/lyCameraPupuk"
         layout="@layout/activity_camera"
         android:visibility="gone" />
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/clLayoutHand"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:elevation="20dp"
+        android:visibility="gone">
+
+        <include
+            android:id="@+id/loadingHand"
+            layout="@layout/loading_file_layout"
+            android:elevation="20dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

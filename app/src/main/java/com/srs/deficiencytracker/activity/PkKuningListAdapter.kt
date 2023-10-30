@@ -3,8 +3,6 @@ package com.srs.deficiencytracker.activity
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Intent
-import android.graphics.Color
-import android.graphics.drawable.ColorDrawable
 import android.util.Log
 import android.view.View
 import android.view.ViewGroup
@@ -12,15 +10,14 @@ import android.widget.ArrayAdapter
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
-import com.srs.deficiencytracker.MainActivity
 import com.srs.deficiencytracker.R
 import com.srs.deficiencytracker.database.PemupukanSQL
 import com.srs.deficiencytracker.database.PemupukanSQL.Companion.db_tabPkKuning
 import com.srs.deficiencytracker.utilities.AlertDialogUtility
 import com.srs.deficiencytracker.utilities.PrefManager
+import com.srs.deficiencytracker.utilities.PrefManagerEstate
 import org.json.JSONObject
 import java.io.File
-import java.text.SimpleDateFormat
 import java.util.*
 
 class PkKuningListAdapter(
@@ -71,6 +68,13 @@ class PkKuningListAdapter(
                 val fileMaps = File(pkPath)
                 if (fileMaps.exists()) {
                     try {
+                        val pm = PrefManagerEstate(context)
+                        val pmPrevCons = try {
+                            pm.prevCons!!
+                        } catch (e: Exception) {
+                            ""
+                        }
+
                         val readMaps = fileMaps.readText()
                         val objMaps = JSONObject(readMaps)
 
@@ -83,10 +87,58 @@ class PkKuningListAdapter(
                             val item =
                                 blokObjMaps.getJSONObject(index)
                             if (idPk[pos].toString() == index) {
-                                item.put("status", "Belum")
-                                fileMaps.writeText(objMaps.toString())
+                                if (status[pos] == "Terverifikasi") {
+                                    if (kondisi[pos] == "Sembuh") {
+                                        if (pmPrevCons.isNotEmpty()) {
+                                            val splitPrevCons =
+                                                pm.prevCons!!.replace("[", "").replace("]", "")
+                                                    .replace(" ", "").split(",")
+                                            for (a in splitPrevCons.indices) {
+                                                val valPrev = splitPrevCons[a].split("$")
+                                                if (idPk[pos].toString() == valPrev[0]) {
+                                                    item.put("status", valPrev[2])
+                                                    item.remove("tanggal")
+                                                }
+                                            }
+                                        }
+                                    } else {
+                                        if (pmPrevCons.isNotEmpty()) {
+                                            val splitPrevCons =
+                                                pm.prevCons!!.replace("[", "").replace("]", "")
+                                                    .replace(" ", "").split(",")
+                                            for (a in splitPrevCons.indices) {
+                                                val valPrev = splitPrevCons[a].split("$")
+                                                if (idPk[pos].toString() == valPrev[0]) {
+                                                    item.put("status", valPrev[2])
+                                                    if (valPrev[3].isNotEmpty()) {
+                                                        item.put("tanggal", valPrev[3].replace("|", " "))
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    if (kondisi[pos] == "Sembuh") {
+                                        if (pmPrevCons.isNotEmpty()) {
+                                            val splitPrevCons =
+                                                pm.prevCons!!.replace("[", "").replace("]", "")
+                                                    .replace(" ", "").split(",")
+                                            for (a in splitPrevCons.indices) {
+                                                val valPrev = splitPrevCons[a].split("$")
+                                                if (idPk[pos].toString() == valPrev[0]) {
+                                                    item.put("kondisi", valPrev[1])
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    item.put("status", "Belum")
+                                    item.remove("tanggal")
+                                    item.remove("perlakuan")
+                                }
                             }
                         }
+                        fileMaps.writeText(objMaps.toString())
 
                         val db = PemupukanSQL(context).readableDatabase
                         val rowsDeleted = db.delete(

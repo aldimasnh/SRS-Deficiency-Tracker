@@ -14,6 +14,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.srs.deficiencytracker.R
 import com.srs.deficiencytracker.utilities.PrefManager
+import com.srs.deficiencytracker.utilities.UpdateMan
 
 open class WebViewActivity : AppCompatActivity() {
     private lateinit var webView: WebView
@@ -22,6 +23,7 @@ open class WebViewActivity : AppCompatActivity() {
     @SuppressLint("SetTextI18n", "MissingInflatedId")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        UpdateMan().transparentStatusNavBar(window)
         setContentView(R.layout.activity_webview)
 
         webView = findViewById(R.id.webviewDT)

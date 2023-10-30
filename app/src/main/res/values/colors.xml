@@ -7,6 +7,7 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
 
+    <color name="colorPurple">#5C00FF</color>
     <color name="colorGreenList">#DCEDC8</color>
     <color name="colorMainSSMSPurple">#606EB2</color>
     <color name="border_grey">#708090</color>
@@ -24,5 +25,13 @@
     <color name="low">#FFC107</color>
     <color name="colorGreen_A400">#00E676</color>
     <color name="dashboard">#FB8C00</color>
+    <color name="darkGreenColor">#138d75</color>
     <color name="yellow1">#FFD73B</color>
+
+    <color name="blue1">#1976D2</color>
+    <color name="green1">#4CAF50</color>
+
+    <color name="singleAct">#bb8fce</color>
+    <color name="blokAct">#ec7063</color>
+
 </resources>

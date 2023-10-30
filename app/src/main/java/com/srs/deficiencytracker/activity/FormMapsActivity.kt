@@ -33,8 +33,10 @@ import com.srs.deficiencytracker.MainActivity
 import com.srs.deficiencytracker.R
 import com.srs.deficiencytracker.utilities.AlertDialogUtility
 import com.srs.deficiencytracker.utilities.FileMan
+import com.srs.deficiencytracker.utilities.ModelMain
 import com.srs.deficiencytracker.utilities.PrefManager
 import com.srs.deficiencytracker.utilities.PrefManagerEstate
+import com.srs.deficiencytracker.utilities.UpdateMan
 import de.mateware.snacky.Snacky
 import es.dmoral.toasty.Toasty
 import kotlinx.android.synthetic.main.activity_form_est.cvNext
@@ -48,6 +50,7 @@ import kotlinx.android.synthetic.main.activity_form_est.rb_maps3
 import kotlinx.android.synthetic.main.activity_form_est.sp_afd_form
 import kotlinx.android.synthetic.main.activity_form_est.sp_blok_form
 import kotlinx.android.synthetic.main.activity_form_est.sp_est_form
+import kotlinx.android.synthetic.main.activity_maps.mapView
 import kotlinx.android.synthetic.main.header_form.tv_update_header_gudang
 import kotlinx.android.synthetic.main.header_form.tv_ver_app_header_gudang
 import kotlinx.android.synthetic.main.header_form.view.icLocationHeader
@@ -67,10 +70,15 @@ open class FormMapsActivity : AppCompatActivity() {
     private var luas = ""
     private var sph = 0
 
+    private var pkPath = ""
+    private var urlCategory = ""
+    private var fileMaps: File? = null
+
     val pilihEstate = "Pilih Estate"
     val pilihAfdeling = "Pilih Afdeling"
     val pilihBlok = "Pilih Blok"
 
+    private var estateArrPk = ArrayList<String>()
     private var countYellowTrees = ArrayList<String>()
     private var estateArrayList = ArrayList<String>()
     private var estateArray = ArrayList<String>()
@@ -96,6 +104,7 @@ open class FormMapsActivity : AppCompatActivity() {
     @SuppressLint("SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        UpdateMan().transparentStatusNavBar(window)
         setContentView(R.layout.activity_form_est)
 
         val pm = PrefManagerEstate(this@FormMapsActivity)
@@ -114,6 +123,22 @@ open class FormMapsActivity : AppCompatActivity() {
         rb_maps1.isChecked = true
         llMapsAfd.visibility = View.GONE
         llMapsBlok.visibility = View.GONE
+
+        urlCategory = PrefManager(this).dataReg!!
+        pkPath = this.getExternalFilesDir(null)?.absolutePath + "/MAIN/pk" + urlCategory
+        fileMaps = File(pkPath)
+        if (fileMaps!!.exists()) {
+            try {
+                val readMaps = fileMaps!!.readText()
+                val objMaps = JSONObject(readMaps)
+                for (key in objMaps.keys()) {
+                    estateArrPk.add(key)
+                }
+            } catch (e: Exception) {
+                Log.d("ET", "Error: $e")
+                e.printStackTrace()
+            }
+        }
 
         rb_maps1.setOnCheckedChangeListener { compoundButton, b ->
             if (b) {
@@ -147,7 +172,6 @@ open class FormMapsActivity : AppCompatActivity() {
             }
         }
 
-        var urlCategory = PrefManager(this).dataReg!!
         val obj = JSONObject(
             FileMan().onlineInputStream(
                 urlCategory,
@@ -250,7 +274,7 @@ open class FormMapsActivity : AppCompatActivity() {
                 }
             )
         }
-        sp_est_form.setItems(estateArrayList.sorted())
+        sp_est_form.setItems(estateArrPk.sorted())
         sp_est_form.text = pilihEstate
 
         val blokPlotArrayList = ArrayList<String>()
@@ -299,6 +323,27 @@ open class FormMapsActivity : AppCompatActivity() {
                     sphArrayList.add(sphArray[i])
                 }
             }
+
+            if (fileMaps!!.exists()) {
+                try {
+                    val readMaps = fileMaps!!.readText()
+                    val objMaps = JSONObject(readMaps)
+                    val estObjMaps = objMaps.getJSONObject(est)
+                    val afdObjMaps = estObjMaps.getJSONObject(afd)
+                    for (indexAfd in afdObjMaps.keys()) {
+                        if (!blokArrayList.contains(indexAfd)) {
+                            if (indexAfd.isNotEmpty()) {
+                                blokArrayList.add(indexAfd)
+                                blokPlotArrayList.add(indexAfd)
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.d("ET", "Error: $e")
+                    e.printStackTrace()
+                }
+            }
+
             blokArrayList.sort()
             blokPlotArrayList.sort()
             sp_blok_form.setItems(blokArrayList)
@@ -366,6 +411,27 @@ open class FormMapsActivity : AppCompatActivity() {
                         sphArrayList.add(sphArray[i])
                     }
                 }
+
+                if (fileMaps!!.exists()) {
+                    try {
+                        val readMaps = fileMaps!!.readText()
+                        val objMaps = JSONObject(readMaps)
+                        val estObjMaps = objMaps.getJSONObject(est)
+                        val afdObjMaps = estObjMaps.getJSONObject(afd)
+                        for (indexAfd in afdObjMaps.keys()) {
+                            if (!blokArrayList.contains(indexAfd)) {
+                                if (indexAfd.isNotEmpty()) {
+                                    blokArrayList.add(indexAfd)
+                                    blokPlotArrayList.add(indexAfd)
+                                }
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.d("ET", "Error: $e")
+                        e.printStackTrace()
+                    }
+                }
+
                 blokArrayList.sort()
                 blokPlotArrayList.sort()
                 sp_blok_form.setItems(blokArrayList)
@@ -387,12 +453,9 @@ open class FormMapsActivity : AppCompatActivity() {
             try {
                 countYellowTrees.clear()
 
-                val pkPath =
-                    this.getExternalFilesDir(null)?.absolutePath + "/MAIN/pk" + PrefManager(this).dataReg!!
-                val fileMaps = File(pkPath)
-                if (fileMaps.exists()) {
+                if (fileMaps!!.exists()) {
                     try {
-                        val readMaps = fileMaps.readText()
+                        val readMaps = fileMaps!!.readText()
                         val objMaps = JSONObject(readMaps)
 
                         val estObjMaps = objMaps.getJSONObject(est)
@@ -447,6 +510,8 @@ open class FormMapsActivity : AppCompatActivity() {
                     Toasty.warning(this, "Tidak ada data pokok kuning!", Toasty.LENGTH_LONG).show()
                 } else {
                     if (firstGPS) {
+                        stopLocationUpdates()
+
                         pm.estate = est
                         pm.afdeling = afd
                         pm.blok = blok
@@ -460,6 +525,7 @@ open class FormMapsActivity : AppCompatActivity() {
                                 .putExtra("afd", afd)
                                 .putExtra("blok", blok)
                                 .putExtra("blokPlot", blokPlot)
+                                .putExtra("pos", "$lat$$lon")
                         startActivity(intent)
                         finishAffinity()
                     } else {
@@ -591,7 +657,7 @@ open class FormMapsActivity : AppCompatActivity() {
                         val intent = Intent()
                         intent.action = Settings.ACTION_APPLICATION_DETAILS_SETTINGS
                         val uri = Uri.fromParts(
-                            "co.id.ssms.mobilepro",
+                            "com.srs.deficiencytracker",
                             BuildConfig.APPLICATION_ID, null
                         )
                         intent.data = uri

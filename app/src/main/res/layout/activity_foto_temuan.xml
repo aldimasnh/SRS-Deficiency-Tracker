@@ -104,7 +104,7 @@
             android:layout_marginHorizontal="20dp"
             android:layout_marginBottom="15dp"
             android:layout_marginTop="5dp"
-            android:hint="Keterangan dan komentar"
+            android:hint="Dosis pupuk? Metode aplikasi?"
             android:inputType="textCapSentences|textMultiLine" />
 
     </LinearLayout>

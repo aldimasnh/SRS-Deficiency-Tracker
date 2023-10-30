@@ -38,8 +38,6 @@ class PemupukanSQL(context: Context) : SQLiteOpenHelper(
         const val db_kondisi = "kondisi"
         const val db_datetime = "datetime"
         const val db_jenisPupukID = "jenis_pupuk_id"
-        const val db_dosisPupuk = "dosis_pupuk"
-        const val db_metode = "metode"
         const val db_photo = "foto"
         const val db_komen = "komentar"
         const val db_app_ver = "app_version"
@@ -51,7 +49,20 @@ class PemupukanSQL(context: Context) : SQLiteOpenHelper(
         val createTablePupuk =
             ("CREATE TABLE $db_tabPupuk ($db_id INTEGER PRIMARY KEY, $db_namaPupuk VARCHAR)")
         val createTablePkKuning =
-            ("CREATE TABLE $db_tabPkKuning ($db_id INTEGER PRIMARY KEY, $db_idPk INTEGER, $db_estate VARCHAR, $db_afdeling VARCHAR, $db_blok VARCHAR, $db_status VARCHAR, $db_kondisi VARCHAR, $db_datetime VARCHAR, $db_jenisPupukID INTEGER, $db_dosisPupuk VARCHAR, $db_metode VARCHAR, $db_photo VARCHAR, $db_komen VARCHAR, $db_archive INTEGER, $db_app_ver VARCHAR)")
+            ("CREATE TABLE $db_tabPkKuning (" +
+                    "$db_id INTEGER PRIMARY KEY, " +
+                    "$db_idPk INTEGER, " +
+                    "$db_estate VARCHAR, " +
+                    "$db_afdeling VARCHAR, " +
+                    "$db_blok VARCHAR, " +
+                    "$db_status VARCHAR, " +
+                    "$db_kondisi VARCHAR, " +
+                    "$db_datetime VARCHAR, " +
+                    "$db_jenisPupukID VARCHAR, " +
+                    "$db_photo VARCHAR," +
+                    "$db_komen VARCHAR, " +
+                    "$db_archive INTEGER, " +
+                    "$db_app_ver VARCHAR)")
 
         db?.execSQL(createTablePupuk)
         db?.execSQL(createTablePkKuning)
@@ -59,7 +70,7 @@ class PemupukanSQL(context: Context) : SQLiteOpenHelper(
 
     override fun onUpgrade(db: SQLiteDatabase?, oldVersion: Int, newVersion: Int) {
         db!!.execSQL("DROP TABLE IF EXISTS $db_tabPupuk")
-        db!!.execSQL("DROP TABLE IF EXISTS $db_tabPkKuning")
+        db.execSQL("DROP TABLE IF EXISTS $db_tabPkKuning")
         onCreate(db)
     }
 
@@ -86,11 +97,10 @@ class PemupukanSQL(context: Context) : SQLiteOpenHelper(
         estate: String,
         afdeling: String,
         blok: String,
+        status: String,
         kondisi: String,
         datetime: String,
-        jenisPupukId: Int,
-        dosisPupuk: String,
-        metodePupuk: String,
+        jenisPupukId: String,
         foto: String,
         komen: String,
         app_ver: String
@@ -101,12 +111,10 @@ class PemupukanSQL(context: Context) : SQLiteOpenHelper(
         contentValues.put(db_estate, estate)
         contentValues.put(db_afdeling, afdeling)
         contentValues.put(db_blok, blok)
-        contentValues.put(db_status, "Sudah")
+        contentValues.put(db_status, status)
         contentValues.put(db_kondisi, kondisi)
         contentValues.put(db_datetime, datetime)
         contentValues.put(db_jenisPupukID, jenisPupukId)
-        contentValues.put(db_dosisPupuk, dosisPupuk)
-        contentValues.put(db_metode, metodePupuk)
         contentValues.put(db_photo, foto)
         contentValues.put(db_komen, komen)
         contentValues.put(db_archive, 0)
@@ -139,12 +147,7 @@ class PemupukanSQL(context: Context) : SQLiteOpenHelper(
                         cursor.getString(cursor.getColumnIndex(db_blok)),
                         cursor.getString(cursor.getColumnIndex(db_status)),
                         cursor.getString(cursor.getColumnIndex(db_kondisi)),
-                        cursor.getString(cursor.getColumnIndex(db_datetime)),
-                        cursor.getString(cursor.getColumnIndex(db_jenisPupukID)),
-                        cursor.getString(cursor.getColumnIndex(db_dosisPupuk)),
-                        cursor.getString(cursor.getColumnIndex(db_metode)),
-                        cursor.getString(cursor.getColumnIndex(db_photo)),
-                        cursor.getString(cursor.getColumnIndex(db_komen))
+                        cursor.getString(cursor.getColumnIndex(db_datetime))
                     )
                 )
             } while (cursor.moveToNext())

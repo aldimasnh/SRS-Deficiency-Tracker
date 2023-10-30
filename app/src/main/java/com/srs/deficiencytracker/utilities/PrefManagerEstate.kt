@@ -65,6 +65,13 @@ class PrefManagerEstate(_context: Context) {
             editor.commit()
         }
 
+    var prevCons: String?
+        get() = pref.getString("prevCons", null)
+        set(prevCons) {
+            editor.putString("prevCons", prevCons)
+            editor.commit()
+        }
+
     companion object {
         // Shared preferences file name
         private const val PREF_NAME = "prefEstate"

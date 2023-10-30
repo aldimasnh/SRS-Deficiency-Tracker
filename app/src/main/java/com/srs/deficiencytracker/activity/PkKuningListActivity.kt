@@ -40,23 +40,20 @@ import com.srs.deficiencytracker.database.PemupukanSQL.Companion.db_app_ver
 import com.srs.deficiencytracker.database.PemupukanSQL.Companion.db_archive
 import com.srs.deficiencytracker.database.PemupukanSQL.Companion.db_blok
 import com.srs.deficiencytracker.database.PemupukanSQL.Companion.db_datetime
-import com.srs.deficiencytracker.database.PemupukanSQL.Companion.db_dosisPupuk
 import com.srs.deficiencytracker.database.PemupukanSQL.Companion.db_estate
 import com.srs.deficiencytracker.database.PemupukanSQL.Companion.db_id
 import com.srs.deficiencytracker.database.PemupukanSQL.Companion.db_idPk
 import com.srs.deficiencytracker.database.PemupukanSQL.Companion.db_jenisPupukID
 import com.srs.deficiencytracker.database.PemupukanSQL.Companion.db_komen
 import com.srs.deficiencytracker.database.PemupukanSQL.Companion.db_kondisi
-import com.srs.deficiencytracker.database.PemupukanSQL.Companion.db_metode
 import com.srs.deficiencytracker.database.PemupukanSQL.Companion.db_photo
 import com.srs.deficiencytracker.database.PemupukanSQL.Companion.db_status
 import com.srs.deficiencytracker.database.PemupukanSQL.Companion.db_tabPkKuning
-import com.srs.deficiencytracker.database.PupukList
 import com.srs.deficiencytracker.database.ViewPkKuning
 import com.srs.deficiencytracker.utilities.AlertDialogUtility
-import com.srs.deficiencytracker.utilities.Database
 import com.srs.deficiencytracker.utilities.FileMan
 import com.srs.deficiencytracker.utilities.PrefManager
+import com.srs.deficiencytracker.utilities.PrefManagerEstate
 import com.srs.deficiencytracker.utilities.UpdateMan
 import es.dmoral.toasty.Toasty
 import kotlinx.android.synthetic.main.activity_list_upload.clLayoutUpload
@@ -93,7 +90,7 @@ class PkKuningListActivity : AppCompatActivity() {
 
     //upload
     private val urlCekFoto = "https://srs-ssms.com/deficiency_tracker/checkFotoTracker.php"
-    private val urlInsert = "https://srs-ssms.com/deficiency_tracker/postDataTracker.php"
+    private val urlInsert = "https://srs-ssms.com/deficiency_tracker/postDataTracker3.php"
     var serverURL: String = "https://srs-ssms.com/deficiency_tracker/recordFotoTracker.php"
     private val client = OkHttpClient()
 
@@ -112,8 +109,8 @@ class PkKuningListActivity : AppCompatActivity() {
     var shouldStop = false
     val handler = Handler()
     val delay = 5000
-    val timeOut = 600000
-    val runnableCode = object : Runnable {
+    private val timeOut = 600000
+    private val runnableCode = object : Runnable {
         override fun run() {
             if (shouldStop) {
                 return
@@ -151,6 +148,7 @@ class PkKuningListActivity : AppCompatActivity() {
                     if (messageInsert.isNotEmpty()) {
                         handler.postDelayed({
                             if (successResponseInsert == 1) {
+                                PrefManagerEstate(this@PkKuningListActivity).prevCons = null
                                 Toasty.success(
                                     this@PkKuningListActivity,
                                     messageInsert,
@@ -179,7 +177,7 @@ class PkKuningListActivity : AppCompatActivity() {
             handler.postDelayed(this, delay.toLong())
         }
     }
-    val stopRunnable = Runnable {
+    private val stopRunnable = Runnable {
         if (!stoppedByConditions) {
             shouldStop = true
             uploading = false
@@ -210,7 +208,7 @@ class PkKuningListActivity : AppCompatActivity() {
         }
     }
 
-    val arrayMissPhoto = ArrayList<String>()
+    private val arrayMissPhoto = ArrayList<String>()
     val arrayCheckFoto = ArrayList<String>()
     val idArray = ArrayList<Int>()
     val idPkArray = ArrayList<Int>()
@@ -220,9 +218,7 @@ class PkKuningListActivity : AppCompatActivity() {
     val statusArray = ArrayList<String>()
     val kondisiArray = ArrayList<String>()
     val datetimeArray = ArrayList<String>()
-    val jenisPupukArray = ArrayList<Int>()
-    val dosisPupukArray = ArrayList<String>()
-    val metodeArray = ArrayList<String>()
+    val jenisPupukArray = ArrayList<String>()
     val photoArray = ArrayList<String>()
     val komenArray = ArrayList<String>()
     val appVerArray = ArrayList<String>()
@@ -232,6 +228,7 @@ class PkKuningListActivity : AppCompatActivity() {
     @SuppressLint("SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        UpdateMan().transparentStatusNavBar(window)
         setContentView(R.layout.activity_list_upload)
         urlCategory = PrefManager(this).dataReg!!
         tv_ver_header.text = "App ver: ${BuildConfig.VERSION_NAME}"
@@ -339,20 +336,7 @@ class PkKuningListActivity : AppCompatActivity() {
 
                     if (connected) {
                         if (PemupukanSQL(this).setRecordPkKuning().toInt() > 0) {
-                            val department = try {
-                                PrefManager(this).departemen!!
-                            } catch (e: Exception) {
-                                "null"
-                            }
-                            if (department.contains("QC")) {
-                                post()
-                            } else {
-                                AlertDialogUtility.alertDialog(
-                                    this,
-                                    "${PrefManager(this).name!!} bukan termasuk anggota QC!",
-                                    "warning.json"
-                                )
-                            }
+                            post()
                         } else {
                             Toasty.warning(this, "Tidak ada data dalam list!!", Toast.LENGTH_SHORT)
                                 .show()
@@ -401,8 +385,6 @@ class PkKuningListActivity : AppCompatActivity() {
         kondisiArray.clear()
         datetimeArray.clear()
         jenisPupukArray.clear()
-        dosisPupukArray.clear()
-        metodeArray.clear()
         photoArray.clear()
         komenArray.clear()
         val selectQuery =
@@ -421,15 +403,15 @@ class PkKuningListActivity : AppCompatActivity() {
                     statusArray.add(getData(db_status, c))
                     kondisiArray.add(getData(db_kondisi, c))
                     datetimeArray.add(getData(db_datetime, c))
-                    jenisPupukArray.add(getData(db_jenisPupukID, c).toInt())
-                    dosisPupukArray.add(getData(db_dosisPupuk, c))
-                    metodeArray.add(getData(db_metode, c))
+                    jenisPupukArray.add(getData(db_jenisPupukID, c))
                     photoArray.add(getData(db_photo, c))
                     val arrayFoto =
                         getData(db_photo, c).split("$")
                     for (a in arrayFoto.indices) {
                         if (arrayFoto[a].isNotEmpty()) {
-                            arrayCheckFoto.add(arrayFoto[a])
+                            if (!arrayCheckFoto.contains(arrayFoto[a])) {
+                                arrayCheckFoto.add(arrayFoto[a])
+                            }
                         }
                     }
                     komenArray.add(getData(db_komen, c))
@@ -476,17 +458,15 @@ class PkKuningListActivity : AppCompatActivity() {
                             .replace("\"", "").replace(" ", ""),
                         "Harap mengambil foto ulang dan rename sesuai dengan pemberitahuan berikut.",
                         "",
-                        {
-                        },
-                        {
-                        },
+                        null,
+                        null,
                         true
                     )
                 },
                 {
                     uploading = true
                     clLayoutUpload.visibility = View.VISIBLE
-                    arrayCheckFoto.removeAll(arrayMissPhoto)
+                    arrayCheckFoto.removeAll(arrayMissPhoto.toSet())
 
                     handler.postDelayed(runnableCode, delay.toLong())
                     handler.postDelayed(stopRunnable, timeOut.toLong())
@@ -527,9 +507,7 @@ class PkKuningListActivity : AppCompatActivity() {
         statusUp: String,
         kondisiUp: String,
         dateUp: String,
-        jenisPupukUp: Int,
-        dosisPupukUp: String,
-        metodeUp: String,
+        jenisPupukUp: String,
         photoUp: String,
         komenUp: String,
         appVerUp: String
@@ -584,6 +562,7 @@ class PkKuningListActivity : AppCompatActivity() {
             override fun getParams(): Map<String, String> {
                 val params: MutableMap<String, String> =
                     HashMap()
+                params["jabatan"] = PrefManager(this@PkKuningListActivity).jabatan!!
                 params["petugas"] = PrefManager(this@PkKuningListActivity).name!!
                 params[db_idPk] = idPkUp.toString()
                 params[db_estate] = estUp
@@ -592,9 +571,7 @@ class PkKuningListActivity : AppCompatActivity() {
                 params[db_status] = statusUp
                 params[db_kondisi] = kondisiUp
                 params[db_datetime] = dateUp
-                params[db_jenisPupukID] = jenisPupukUp.toString()
-                params[db_dosisPupuk] = dosisPupukUp
-                params[db_metode] = metodeUp
+                params[db_jenisPupukID] = jenisPupukUp
                 params[db_photo] = photoUp
                 params[db_komen] = komenUp
                 params[db_app_ver] = appVerUp
@@ -655,8 +632,6 @@ class PkKuningListActivity : AppCompatActivity() {
                                 kondisiUp = kondisiArray[i],
                                 dateUp = datetimeArray[i],
                                 jenisPupukUp = jenisPupukArray[i],
-                                dosisPupukUp = dosisPupukArray[i],
-                                metodeUp = metodeArray[i],
                                 photoUp = photoArray[i],
                                 komenUp = komenArray[i],
                                 appVerUp = appVerArray[i]
@@ -701,7 +676,7 @@ class PkKuningListActivity : AppCompatActivity() {
                     connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI)!!.state === NetworkInfo.State.CONNECTED
         val f = File(filePath + urlCategory)
         if ((connected && !f.exists())) {
-            updateListPupuk()
+            UpdateMan().updateListPupuk(this)
 
             val config = PRDownloaderConfig.newBuilder()
                 .setReadTimeout(30000)
@@ -753,7 +728,7 @@ class PkKuningListActivity : AppCompatActivity() {
                             if (fDeleteDBC.exists()) {
                                 fDeleteDBC.delete()
                             }
-                        } else if (cacheCheck != mainCheck) {
+                        } else {
                             Log.d("cek", "BEDA")
                             val fDeleteDBC =
                                 File(getExternalFilesDir(null)?.absolutePath + "/CACHE/" + "header$urlCategory")
@@ -784,9 +759,9 @@ class PkKuningListActivity : AppCompatActivity() {
                                 if (fDelete.exists()) {
                                     fDelete.delete()
                                 }
-                                val filePath =
+                                val fileP =
                                     getExternalFilesDir(null)?.absolutePath + "/MAIN/"
-                                val f = File(filePath + urlCategory)
+                                val f = File(fileP + urlCategory)
                                 if ((!f.exists())) {
                                     clLayoutUpload.visibility = View.VISIBLE
                                     val config = PRDownloaderConfig.newBuilder()
@@ -802,7 +777,7 @@ class PkKuningListActivity : AppCompatActivity() {
                                         .toString() + "zip"
                                     Log.d("testzip", "zipfile: $zipFile || url: $url")
                                     val downloadId =
-                                        PRDownloader.download(url, filePath, zipFile)
+                                        PRDownloader.download(url, fileP, zipFile)
                                             .build()
                                             .setOnStartOrResumeListener { }
                                             .setOnPauseListener { }
@@ -828,12 +803,12 @@ class PkKuningListActivity : AppCompatActivity() {
                                                 override fun onDownloadComplete() {
                                                     try {
                                                         FileMan().unzip(
-                                                            filePath + zipFile,
-                                                            filePath
+                                                            fileP + zipFile,
+                                                            fileP
                                                         )
 
                                                     } finally {
-                                                        File(filePath + zipFile).delete()
+                                                        File(fileP + zipFile).delete()
                                                         clLayoutUpload.visibility = View.GONE
                                                     }
                                                 }
@@ -870,79 +845,6 @@ class PkKuningListActivity : AppCompatActivity() {
                 "network_error.json"
             )
         }
-    }
-
-    fun updateListPupuk() {
-        val prefManager = PrefManager(this) //init shared preference
-        val strReq: StringRequest =
-            object : StringRequest(
-                Method.POST,
-                "https://srs-ssms.com/getListPupukParams.php",
-                Response.Listener { response ->
-                    try {
-                        val jObj = JSONObject(response)
-                        val success = jObj.getInt("status")
-
-                        // Check for error node in json
-                        val databaseHandler =
-                            PemupukanSQL(this)
-                        if (success == 1) {
-                            val version = jObj.getInt("version")
-                            databaseHandler.deleteDb()
-                            val dataListPupukArray = jObj.getJSONObject("listPupuk")
-                            val beforeSplitId = dataListPupukArray.getJSONArray("id")
-                            val beforeSplitNama = dataListPupukArray.getJSONArray("nama")
-                            Log.d("parsing", beforeSplitNama.toString())
-
-                            var idArray = ArrayList<Int>()
-                            for (i in 0 until beforeSplitId.length()) {
-                                idArray.add(beforeSplitId.getInt(i))
-                            }
-
-                            var namaArray = ArrayList<String>()
-                            for (i in 0 until beforeSplitNama.length()) {
-                                namaArray.add(beforeSplitNama.getString(i))
-                            }
-
-                            var statusQuery = 1L
-                            for (i in 0 until idArray.size) {
-                                val status = databaseHandler.addPupuk(
-                                    PupukList(
-                                        db_id = idArray[i],
-                                        db_pupuk = namaArray[i]
-                                    )
-                                )
-                                if (status == 0L) {
-                                    statusQuery = 0L
-                                }
-                            }
-
-                            if (statusQuery > -1) {
-                                Log.d("logPupuk", "${jObj.getString(Database.TAG_MESSAGE)}")
-                                prefManager.version = version
-                            } else {
-                                Log.d("logPupuk", "Terjadi kesalahan, hubungi pengembang")
-                                databaseHandler.deleteDb()
-                            }
-                        } else {
-                            Log.d("logPupuk", "${jObj.getString(Database.TAG_MESSAGE)}")
-                        }
-                    } catch (e: JSONException) {
-                        Log.d("logPupuk", "Data error, hubungi pengembang: $e")
-                        e.printStackTrace()
-                    }
-                },
-                Response.ErrorListener { error ->
-                    Log.d("logPupuk", "Terjadi kesalahan koneksi")
-                }) {
-                override fun getParams(): Map<String, String> {
-                    // Posting parameters to login url
-                    val params: MutableMap<String, String> = HashMap()
-                    params["version"] = prefManager.version.toString()
-                    return params
-                }
-            }
-        Volley.newRequestQueue(this).add(strReq)
     }
 
     private fun getBytesToMBString(bytes: Long): String? {

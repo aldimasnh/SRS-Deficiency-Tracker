@@ -2,33 +2,40 @@ package com.srs.deficiencytracker.activity
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.app.ActivityManager
 import android.content.Context
 import android.content.Intent
 import android.content.IntentSender
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
+import android.database.Cursor
+import android.database.sqlite.SQLiteException
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.PorterDuff
 import android.graphics.drawable.BitmapDrawable
+import android.graphics.drawable.Drawable
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.location.Location
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.os.Looper
 import android.preference.PreferenceManager
 import android.provider.Settings
 import android.util.Log
 import android.view.View
+import android.view.animation.AnimationUtils
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.DrawableCompat
+import com.bumptech.glide.Glide
 import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.location.FusedLocationProviderClient
@@ -39,26 +46,47 @@ import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.LocationSettingsRequest
 import com.google.android.gms.location.LocationSettingsStatusCodes
 import com.google.android.gms.location.SettingsClient
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.snackbar.Snackbar
 import com.srs.deficiencytracker.BuildConfig
 import com.srs.deficiencytracker.MainActivity
 import com.srs.deficiencytracker.R
+import com.srs.deficiencytracker.database.PemupukanSQL
 import com.srs.deficiencytracker.utilities.AlertDialogUtility
+import com.srs.deficiencytracker.utilities.DashedLineOverlay
 import com.srs.deficiencytracker.utilities.ModelMain
 import com.srs.deficiencytracker.utilities.PrefManager
+import com.srs.deficiencytracker.utilities.PrefManagerEstate
+import com.srs.deficiencytracker.utilities.UpdateMan
 import de.mateware.snacky.Snacky
 import es.dmoral.toasty.Toasty
-import kotlinx.android.synthetic.main.activity_maps.cvFUMaps
+import kotlinx.android.synthetic.main.activity_maps.clLayoutVerif
+import kotlinx.android.synthetic.main.activity_maps.fbActionMaps
+import kotlinx.android.synthetic.main.activity_maps.fbBlok
+import kotlinx.android.synthetic.main.activity_maps.fbCenterMaps
+import kotlinx.android.synthetic.main.activity_maps.fbMenu1Maps
+import kotlinx.android.synthetic.main.activity_maps.fbMenu2Maps
+import kotlinx.android.synthetic.main.activity_maps.fbMultiple
+import kotlinx.android.synthetic.main.activity_maps.fbPokokSembuh
+import kotlinx.android.synthetic.main.activity_maps.fbSingle
+import kotlinx.android.synthetic.main.activity_maps.loadingVerif
 import kotlinx.android.synthetic.main.activity_maps.mapView
 import kotlinx.android.synthetic.main.activity_maps.tvAccuracyMaps
 import kotlinx.android.synthetic.main.activity_maps.tvBlokMaps
 import kotlinx.android.synthetic.main.activity_maps.tvJarakMaps
 import kotlinx.android.synthetic.main.activity_maps.tvJmlPkMaps
 import kotlinx.android.synthetic.main.activity_maps.tvKondisiMaps
+import kotlinx.android.synthetic.main.activity_maps.tvPokokMaps
 import kotlinx.android.synthetic.main.activity_maps.tvStatusMaps
 import kotlinx.android.synthetic.main.activity_maps.tvTglFotoMaps
+import kotlinx.android.synthetic.main.loading_file_layout.view.logoFileLoader
+import kotlinx.android.synthetic.main.loading_file_layout.view.lottieFileLoader
+import kotlinx.android.synthetic.main.loading_file_layout.view.tvHintFileLoader
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.json.JSONObject
-import org.osmdroid.api.IGeoPoint
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
@@ -70,6 +98,7 @@ import java.io.File
 import java.io.IOException
 import java.text.DateFormat
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import kotlin.math.atan2
@@ -80,16 +109,34 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 
 open class MapsActivity : AppCompatActivity() {
-    var modelMainList: MutableList<ModelMain> = ArrayList()
+    private var modelMainList: MutableList<ModelMain> = ArrayList()
     private var lastClickedMarker: Marker? = null
     private lateinit var sensorManager: SensorManager
+    private var previousDashedLine: DashedLineOverlay? = null
+    private var currentlyClickedPolygon: Polygon? = null
+    private var minRangeAct = 25
+    private var maxActTrees = 0
+    private var modeAct = 0
 
+    private var getIdPk = ""
     private var getEst = ""
     private var getAfd = ""
     private var getBlok = ""
     private var getBlokPlot = ""
+    private var getPos = ""
+
     private var urlCategory = ""
     private var fixBlok = ""
+
+    private val markerMap = mutableMapOf<String, Marker>()
+    private val markerIds = ArrayList<Int>()
+    private val markerAfd = ArrayList<String>()
+    private val markerBlok = ArrayList<String>()
+    private val markerCons = ArrayList<String>()
+    private val markerStats = ArrayList<String>()
+
+    private var perlakuanArray = ArrayList<String>()
+    private var perlakuanIdArray = ArrayList<Int>()
 
     /* [location] */
     private var mFusedLocationClient: FusedLocationProviderClient? = null
@@ -103,7 +150,6 @@ open class MapsActivity : AppCompatActivity() {
     private var lat: Float? = null
     private var lon: Float? = null
     private var currentMarker: Marker? = null
-    private var testMarker: Marker? = null
 
     private var positionMaps = false
     private var firstGPS = false
@@ -112,11 +158,97 @@ open class MapsActivity : AppCompatActivity() {
     private var latPk: Double? = null
     private var lonPk: Double? = null
 
+    private val coroutineScope = CoroutineScope(Dispatchers.Main)
+    private var inserting = false
+
+    private val jobTitles = listOf("Manager", "QC", "Head", "COO", "CEO", "PA")
+    private var isProgrammer = false
+
+    private val animations1 by lazy {
+        Pair(
+            AnimationUtils.loadAnimation(this, R.anim.rotate_open_button),
+            AnimationUtils.loadAnimation(this, R.anim.rotate_close_button)
+        )
+    }
+
+    private val animations2 by lazy {
+        Pair(
+            AnimationUtils.loadAnimation(this, R.anim.rotate_open_button),
+            AnimationUtils.loadAnimation(this, R.anim.rotate_close_button)
+        )
+    }
+
+    private val animationsDrop1 by lazy {
+        Pair(
+            AnimationUtils.loadAnimation(this, R.anim.from_bottom_anim),
+            AnimationUtils.loadAnimation(this, R.anim.to_bottom_anim)
+        )
+    }
+
+    private val animationsDrop2 by lazy {
+        Pair(
+            AnimationUtils.loadAnimation(this, R.anim.from_bottom_anim),
+            AnimationUtils.loadAnimation(this, R.anim.to_bottom_anim)
+        )
+    }
+
+    private val buttonData1 by lazy {
+        Triple(
+            arrayOf(fbActionMaps, fbCenterMaps),
+            arrayOf(true, true),
+            fbMenu1Maps
+        )
+    }
+
+    private val buttonData2 by lazy {
+        Triple(
+            arrayOf(fbPokokSembuh, fbBlok, fbMultiple, fbSingle),
+            arrayOf(true, true, true, true),
+            fbMenu2Maps
+        )
+    }
+
     @SuppressLint("SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        UpdateMan().transparentStatusNavBar(window)
         setContentView(R.layout.activity_maps)
+        setColorFButton()
 
+        modeAct = 0
+        getIdPk = getDataIntent("idPk")
+        getEst = getDataIntent("est")
+        getAfd = getDataIntent("afd")
+        getBlok = getDataIntent("blok")
+        getBlokPlot = getDataIntent("blokPlot")
+        getPos = getDataIntent("pos")
+        urlCategory = PrefManager(this).dataReg!!
+
+        val prefManager = PrefManager(this)
+        isProgrammer = prefManager.jabatan == "Programmer"
+
+        val availableRAM = getAvailableRAM(this)
+        if (availableRAM > 8 || Build.MODEL.contains("A32")) {
+            minRangeAct = 9
+        }
+
+        if (isProgrammer || jobTitles.any { prefManager.jabatan?.contains(it) == true }) {
+            fbActionMaps.setImageResource(R.drawable.baseline_checklist_24)
+        }
+
+        Glide.with(this)//GLIDE LOGO FOR LOADING LAYOUT
+            .load(R.drawable.logo_png_white)
+            .into(loadingVerif.logoFileLoader)
+        Glide.with(this)//GLIDE LOGO FOR LOADING LAYOUT
+            .load(R.drawable.ssms_green)
+            .into(loadingVerif.logoFileLoader)
+        loadingVerif.lottieFileLoader.setAnimation("loading_circle.json")//ANIMATION WITH LOTTIE FOR LOADING LAYOUT
+        @Suppress("DEPRECATION")
+        loadingVerif.lottieFileLoader.loop(true)
+        loadingVerif.lottieFileLoader.playAnimation()
+        loadingVerif.tvHintFileLoader.text = "Mohon ditunggu, sedang memproses"
+
+        getListPupuk()
         updateValuesFromBundle(savedInstanceState)
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         mSettingsClient = LocationServices.getSettingsClient(this)
@@ -125,11 +257,13 @@ open class MapsActivity : AppCompatActivity() {
         buildLocationSettingsRequest()
         mRequestingLocationUpdates = true
 
-        getEst = getDataIntent("est")
-        getAfd = getDataIntent("afd")
-        getBlok = getDataIntent("blok")
-        getBlokPlot = getDataIntent("blokPlot")
-        urlCategory = PrefManager(this).dataReg!!
+        Configuration.getInstance().load(this, PreferenceManager.getDefaultSharedPreferences(this))
+        mapView.setTileSource(TileSourceFactory.DEFAULT_TILE_SOURCE)
+        mapView.setMultiTouchControls(true)
+        mapView.setBuiltInZoomControls(true)
+
+        // Initialize sensor manager and sensors
+        sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
 
         if (getEst == "NBE") {
             if (getBlokPlot.length == 5) {
@@ -142,7 +276,10 @@ open class MapsActivity : AppCompatActivity() {
                 fixBlok = getBlokPlot[0] + getBlokPlot.substring(2)
             }
         } else {
-            if (getBlokPlot.length == 5) {
+            if (getBlokPlot.startsWith("P")) {
+                val sliced = getBlokPlot.substring(0, getBlokPlot.length - 2)
+                fixBlok = sliced + "0" + getBlokPlot.takeLast(2)
+            } else if (getBlokPlot.length == 5) {
                 val sliced = getBlokPlot.substring(0, getBlokPlot.length - 2)
                 fixBlok = sliced.replaceRange(1, 1, "0")
             } else if (getEst == "KTE" || getEst == "MKE" || getEst == "PKE" || getEst == "BSE" || getEst == "BWE" || getEst == "GDE") {
@@ -152,8 +289,6 @@ open class MapsActivity : AppCompatActivity() {
                 } else if (getBlokPlot.length == 6) {
                     fixBlok = getBlokPlot.substring(0, getBlokPlot.length - 3)
                 }
-            } else if (getEst == "BDE") {
-                fixBlok = getBlokPlot.substring(0, getBlokPlot.length - 3)
             } else if (getBlokPlot.length == 8) {
                 val replace = getBlokPlot.replaceRange(1, 2, "")
                 val sliced = replace.substring(0, replace.length - 2)
@@ -185,7 +320,8 @@ open class MapsActivity : AppCompatActivity() {
             }
         }
 
-        val latlnValues = ArrayList<IGeoPoint>()
+        val blokArray = ArrayList<String>()
+        val latlnValues = ArrayList<GeoPoint>()
         val coordinates = mutableListOf<List<GeoPoint>>()
         var currentCoordinateList = mutableListOf<GeoPoint>()
         val mapsPath = this.getExternalFilesDir(null)?.absolutePath + "/MAIN/maps" + urlCategory
@@ -203,27 +339,30 @@ open class MapsActivity : AppCompatActivity() {
                         for (index in indicesAfd) {
                             val blokObjMaps = afdObjMaps.getJSONObject(index)
                             val splLatLn = blokObjMaps.getString("latln").split("$").toTypedArray()
-                            for (item in splLatLn) {
-                                if (item.isBlank()) {
-                                    if (currentCoordinateList.isNotEmpty()) {
-                                        coordinates.add(currentCoordinateList.toList())
-                                        currentCoordinateList.clear()
-                                    }
-                                } else {
-                                    val parts = item.split(", ")
-                                    if (parts.size == 2) {
-                                        val latitude = parts[0].toDouble()
-                                        val longitude = parts[1].toDouble()
-                                        val geoPoint = GeoPoint(latitude, longitude)
+                            if (index.isNotEmpty()) {
+                                blokArray.add(index)
+                                for (item in splLatLn) {
+                                    if (item.isBlank()) {
+                                        if (currentCoordinateList.isNotEmpty()) {
+                                            coordinates.add(currentCoordinateList.toList())
+                                            currentCoordinateList.clear()
+                                        }
+                                    } else {
+                                        val parts = item.split(", ")
+                                        if (parts.size == 2) {
+                                            val latitude = parts[0].toDouble()
+                                            val longitude = parts[1].toDouble()
+                                            val geoPoint = GeoPoint(latitude, longitude)
 
-                                        latlnValues.add(geoPoint) // To get all latlon and be get a average of lat lon to centered maps
-                                        currentCoordinateList.add(geoPoint)
+                                            latlnValues.add(geoPoint) // To get all latlon and be get a average of lat lon to centered maps
+                                            currentCoordinateList.add(geoPoint)
+                                        }
                                     }
                                 }
-                            }
 
-                            if (currentCoordinateList.isNotEmpty()) {
-                                coordinates.add(currentCoordinateList.toList())
+                                if (currentCoordinateList.isNotEmpty()) {
+                                    coordinates.add(currentCoordinateList.toList())
+                                }
                             }
                         }
                     }
@@ -233,6 +372,37 @@ open class MapsActivity : AppCompatActivity() {
                         for (index in indicesAfd) {
                             val blokObjMaps = estObjMaps.getJSONObject(getAfd).getJSONObject(index)
                             val splLatLn = blokObjMaps.getString("latln").split("$").toTypedArray()
+                            if (index.isNotEmpty()) {
+                                blokArray.add(index)
+                                for (item in splLatLn) {
+                                    if (item.isBlank()) {
+                                        if (currentCoordinateList.isNotEmpty()) {
+                                            coordinates.add(currentCoordinateList.toList())
+                                            currentCoordinateList.clear()
+                                        }
+                                    } else {
+                                        val parts = item.split(", ")
+                                        if (parts.size == 2) {
+                                            val latitude = parts[0].toDouble()
+                                            val longitude = parts[1].toDouble()
+                                            val geoPoint = GeoPoint(latitude, longitude)
+
+                                            latlnValues.add(geoPoint) // To get all latlon and be get a average of lat lon to centered maps
+                                            currentCoordinateList.add(geoPoint)
+                                        }
+                                    }
+                                }
+
+                                if (currentCoordinateList.isNotEmpty()) {
+                                    coordinates.add(currentCoordinateList.toList())
+                                }
+                            }
+                        }
+                    } else {
+                        val blokObjMaps = estObjMaps.getJSONObject(getAfd).getJSONObject(fixBlok)
+                        val splLatLn = blokObjMaps.getString("latln").split("$").toTypedArray()
+                        if (fixBlok.isNotEmpty()) {
+                            blokArray.add(fixBlok)
                             for (item in splLatLn) {
                                 if (item.isBlank()) {
                                     if (currentCoordinateList.isNotEmpty()) {
@@ -255,31 +425,6 @@ open class MapsActivity : AppCompatActivity() {
                             if (currentCoordinateList.isNotEmpty()) {
                                 coordinates.add(currentCoordinateList.toList())
                             }
-                        }
-                    } else {
-                        val blokObjMaps = estObjMaps.getJSONObject(getAfd).getJSONObject(fixBlok)
-                        val splLatLn = blokObjMaps.getString("latln").split("$").toTypedArray()
-                        for (item in splLatLn) {
-                            if (item.isBlank()) {
-                                if (currentCoordinateList.isNotEmpty()) {
-                                    coordinates.add(currentCoordinateList.toList())
-                                    currentCoordinateList.clear()
-                                }
-                            } else {
-                                val parts = item.split(", ")
-                                if (parts.size == 2) {
-                                    val latitude = parts[0].toDouble()
-                                    val longitude = parts[1].toDouble()
-                                    val geoPoint = GeoPoint(latitude, longitude)
-
-                                    latlnValues.add(geoPoint) // To get all latlon and be get a average of lat lon to centered maps
-                                    currentCoordinateList.add(geoPoint)
-                                }
-                            }
-                        }
-
-                        if (currentCoordinateList.isNotEmpty()) {
-                            coordinates.add(currentCoordinateList.toList())
                         }
                     }
                 }
@@ -291,41 +436,438 @@ open class MapsActivity : AppCompatActivity() {
             Log.d("ET", "The JSON file maps does not exist.")
         }
 
-        var avgLat = 0.0
-        var avgLon = 0.0
-
-        for (geoPoint in latlnValues) {
-            avgLat += geoPoint.latitude
-            avgLon += geoPoint.longitude
-        }
-
-        avgLat /= latlnValues.size
-        avgLon /= latlnValues.size
-
-        Configuration.getInstance().load(this, PreferenceManager.getDefaultSharedPreferences(this))
+        val mapsCenter = calculateCenter(latlnValues)
         val geoPoint =
-            if (firstGPS) GeoPoint(lat!!.toDouble(), lon!!.toDouble()) else GeoPoint(avgLat, avgLon)
-        mapView.setMultiTouchControls(true)
+            if (firstGPS) {
+                GeoPoint(lat!!.toDouble(), lon!!.toDouble())
+            } else if (mapsCenter != null) {
+                mapsCenter
+            } else {
+                if (getPos.isNotEmpty()) {
+                    val currentPos = getPos.split("$")
+                    GeoPoint(currentPos[0].toDouble(), currentPos[1].toDouble())
+                } else {
+                    GeoPoint(0.0, 0.0)
+                }
+            }
         mapView.controller.animateTo(geoPoint)
-        mapView.setTileSource(TileSourceFactory.DEFAULT_TILE_SOURCE)
-        mapView.zoomController.setVisibility(CustomZoomButtonsController.Visibility.NEVER)
-        mapView.setBuiltInZoomControls(true)
         mapView.controller.setZoom(15.0)
+        mapView.zoomController.setVisibility(CustomZoomButtonsController.Visibility.NEVER)
 
-        // Initialize sensor manager and sensors
-        sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
-
-        for (coordinateList in coordinates) {
+        for (i in coordinates.indices) {
             val polygon = Polygon()
-            polygon.points = coordinateList
-            polygon.fillPaint.color = 0x1523CB1F // Fill color (semi-transparent green)
-            polygon.strokeColor = 0xFF000000.toInt() // Stroke color (black)
+            polygon.points = coordinates[i]
+            polygon.fillPaint.color = 0x1523CB1F
+            polygon.strokeColor = 0xFF000000.toInt()
             polygon.strokeWidth = 2f
+
+            val markerText = Marker(mapView)
+            markerText.position = calculateCenter(coordinates[i])
+            markerText.setTextIcon(blokArray[i])
+            mapView.overlays.add(markerText)
+
             mapView.overlays.add(polygon)
+
+            polygon.setOnClickListener { poly, mv, ep ->
+                if (modeAct == 3) {
+                    if (firstGPS) {
+                        val geopointUser = GeoPoint(lat!!.toDouble(), lon!!.toDouble())
+                        val isUserInsidePolygon = isPointInsidePolygon(geopointUser, coordinates[i])
+
+                        if (isProgrammer || isUserInsidePolygon) {
+                            markerIds.clear()
+                            markerAfd.clear()
+                            markerBlok.clear()
+                            markerCons.clear()
+                            markerStats.clear()
+
+                            if (currentlyClickedPolygon != null) {
+                                currentlyClickedPolygon!!.fillPaint.color = 0x1523CB1F
+                            }
+                            poly.fillPaint.color =
+                                ContextCompat.getColor(this@MapsActivity, R.color.colorPrimaryDark)
+                            currentlyClickedPolygon = poly
+
+                            for (j in modelMainList.indices) {
+                                val geopointPk =
+                                    GeoPoint(modelMainList[j].latPk, modelMainList[j].lonPk)
+                                val isMarkerInsidePolygon =
+                                    isPointInsidePolygon(geopointPk, coordinates[i])
+
+                                val polyId = modelMainList[j].idPk
+                                val polyAfdl = modelMainList[j].afdPk
+                                val polyBloks = modelMainList[j].blokPk
+                                val polyCon = modelMainList[j].kondisiPk
+                                val polyStat = modelMainList[j].statusPk
+
+                                fun procesInsidePoly() {
+                                    markerIds.add(polyId)
+                                    markerAfd.add(polyAfdl)
+                                    markerBlok.add(polyBloks)
+                                    markerCons.add(polyCon)
+                                    markerStats.add(polyStat)
+                                }
+
+                                if (isMarkerInsidePolygon) {
+                                    if (isProgrammer || jobTitles.any { prefManager.jabatan?.contains(it) == true }) {
+                                        if (modeAct != 4) {
+                                            if (polyStat == "Sudah" || (polyStat != "Terverifikasi" && polyCon == "Sembuh")) {
+                                                procesInsidePoly()
+                                            }
+                                        }
+                                    } else {
+                                        if ((polyCon == "Berat" || polyCon == "Ringan" || polyCon == "Pucat") && polyStat == "Belum") {
+                                            procesInsidePoly()
+                                        }
+                                    }
+                                }
+                            }
+                            tvPokokMaps.text = "${markerIds.size}/${markerIds.size}"
+                        } else {
+                            Toasty.warning(
+                                this@MapsActivity,
+                                "Anda belum berada di blok ${blokArray[i]}!",
+                                Toasty.LENGTH_LONG
+                            )
+                                .show()
+                        }
+                    } else {
+                        Toasty.warning(
+                            this@MapsActivity,
+                            "Titik GPS belum didapatkan!",
+                            Toasty.LENGTH_LONG
+                        )
+                            .show()
+                    }
+                } else {
+                    if (modeAct == 0) {
+                        Toasty.warning(
+                            this@MapsActivity,
+                            "Silahkan pilih jenis penanganan terlebih dahulu!"
+                        ).show()
+                    }
+                }
+
+                return@setOnClickListener true
+            }
+
+            mapView.invalidate()
         }
-        mapView.invalidate()
+
+        fbMenu1Maps.setOnClickListener { onAddButtonClicked(buttonData1) }
+        fbMenu2Maps.setOnClickListener { onAddButtonClicked(buttonData2) }
+
+        fbActionMaps.setOnClickListener {
+            if (firstGPS) {
+                if (markerIds.isEmpty()) {
+                    Toasty.warning(
+                        this@MapsActivity,
+                        "Silakan pilih pokok kuning terlebih dahulu!",
+                        Toasty.LENGTH_LONG
+                    )
+                        .show()
+                } else if (!isProgrammer && (fixAccuracy > 10 || accuracyRange > minRangeAct)) {
+                    Toasty.warning(
+                        this@MapsActivity,
+                        "GPS belum memenuhi syarat!",
+                        Toasty.LENGTH_LONG
+                    )
+                        .show()
+                } else if (isProgrammer || jobTitles.any { prefManager.jabatan?.contains(it) == true } && modeAct != 4) {
+                    AlertDialogUtility.withTwoActions(
+                        this@MapsActivity,
+                        "Batal",
+                        "Ya",
+                        "Apakah anda yakin untuk melakukan verifikasi?",
+                        "warning.json"
+                    ) {
+                        inserting = true
+                        clLayoutVerif.visibility = View.VISIBLE
+
+                        coroutineScope.launch {
+                            withContext(Dispatchers.IO) {
+                                insertData()
+                            }
+
+                            withContext(Dispatchers.Main) {
+                                clLayoutVerif.visibility = View.GONE
+                                inserting = false
+                            }
+                        }
+                    }
+                } else {
+                    AlertDialogUtility.withTwoActions(
+                        this@MapsActivity,
+                        "Batal",
+                        "Ya",
+                        "Apakah anda yakin untuk melakukan penanganan?",
+                        "warning.json"
+                    ) {
+                        stopLocationUpdates()
+                        mapView.onPause()
+
+                        val intent =
+                            Intent(
+                                this@MapsActivity,
+                                HandlingFormActivity::class.java
+                            )
+                                .putExtra("id", getCommaSeparatedExtraData(markerIds))
+                                .putExtra("est", getEst)
+                                .putExtra("afd", getCommaSeparatedExtraData(markerAfd))
+                                .putExtra("blok", getCommaSeparatedExtraData(markerBlok))
+                                .putExtra("kondisi", getCommaSeparatedExtraData(markerCons))
+                                .putExtra("status", getCommaSeparatedExtraData(markerStats))
+                                .putExtra("mode", modeAct.toString())
+                                .putExtra("gps", "GA")
+                        startActivity(intent)
+                        finishAffinity()
+                    }
+                }
+            } else {
+                Toasty.warning(
+                    this@MapsActivity,
+                    "Titik GPS belum didapatkan!",
+                    Toasty.LENGTH_LONG
+                )
+                    .show()
+            }
+
+            onAddButtonClicked(buttonData1)
+        }
+
+        fbCenterMaps.setOnClickListener {
+            if (firstGPS) {
+                val centerPoint = GeoPoint(lat!!.toDouble(), lon!!.toDouble())
+                mapView.controller.animateTo(centerPoint)
+            } else {
+                Toasty.warning(
+                    this@MapsActivity,
+                    "Titik GPS belum didapatkan!",
+                    Toasty.LENGTH_LONG
+                )
+                    .show()
+            }
+
+            onAddButtonClicked(buttonData1)
+        }
+
+        fbPokokSembuh.setOnClickListener {
+            if (modeAct == 4) {
+                Toasty.warning(
+                    this@MapsActivity,
+                    "Anda telah memilih pilihan ini.",
+                    Toasty.LENGTH_LONG
+                )
+                    .show()
+            } else {
+                AlertDialogUtility.withTwoActions(
+                    this@MapsActivity,
+                    "Batal",
+                    "Ya",
+                    "Apakah anda ingin melakukan verifikasi pokok kuning?",
+                    "warning.json"
+                ) {
+                    if (modeAct == 2) {
+                        if (jobTitles.any { PrefManager(this).jabatan?.contains(it) == true }) resetMarker(
+                            false
+                        ) else resetMarker(true)
+                    } else if (modeAct == 3) {
+                        if (currentlyClickedPolygon != null) {
+                            markerIds.clear()
+                            markerAfd.clear()
+                            markerBlok.clear()
+                            markerCons.clear()
+                            markerStats.clear()
+                            currentlyClickedPolygon!!.fillPaint.color = 0x1523CB1F
+                            currentlyClickedPolygon = null
+                        }
+                    }
+
+                    if (jobTitles.any { PrefManager(this).jabatan?.contains(it) == true }) {
+                        resetMarker(false)
+                    }
+
+                    maxActTrees = 1
+                    tvPokokMaps.text =
+                        if (markerIds.isNotEmpty()) "${markerIds.size}/$maxActTrees" else "-"
+                    modeAct = 4
+
+                    Toasty.success(
+                        this@MapsActivity,
+                        "Verifikasi pokok kuning berhasil dipilih!",
+                        Toasty.LENGTH_LONG
+                    )
+                        .show()
+                    setColorFButton()
+                }
+            }
+
+            onAddButtonClicked(buttonData2)
+        }
+
+        fbBlok.setOnClickListener {
+            if (modeAct == 3) {
+                Toasty.warning(
+                    this@MapsActivity,
+                    "Anda telah memilih pilihan ini.",
+                    Toasty.LENGTH_LONG
+                )
+                    .show()
+            } else {
+                AlertDialogUtility.withTwoActions(
+                    this@MapsActivity,
+                    "Batal",
+                    "Ya",
+                    "Apakah anda ingin melakukan penanganan berdasarkan blok?",
+                    "warning.json"
+                ) {
+                    if (modeAct != 0) {
+                        resetMarker(false)
+                    }
+
+                    tvPokokMaps.text =
+                        if (markerIds.isNotEmpty()) "${markerIds.size}/$maxActTrees" else "-"
+                    modeAct = 3
+
+                    Toasty.success(
+                        this@MapsActivity,
+                        "Penanganan berdasarkan blok berhasil dipilih!",
+                        Toasty.LENGTH_LONG
+                    )
+                        .show()
+                    setColorFButton()
+                }
+            }
+
+            onAddButtonClicked(buttonData2)
+        }
+
+        fbMultiple.setOnClickListener {
+            if (modeAct == 2) {
+                Toasty.warning(
+                    this@MapsActivity,
+                    "Anda telah memilih pilihan ini.",
+                    Toasty.LENGTH_LONG
+                )
+                    .show()
+            } else {
+                AlertDialogUtility.withTwoActions(
+                    this@MapsActivity,
+                    "Batal",
+                    "Ya",
+                    "Apakah anda ingin melakukan penanganan beberapa titik?",
+                    "warning.json"
+                ) {
+                    if (modeAct == 3) {
+                        if (currentlyClickedPolygon != null) {
+                            markerIds.clear()
+                            markerAfd.clear()
+                            markerBlok.clear()
+                            markerCons.clear()
+                            markerStats.clear()
+                            currentlyClickedPolygon!!.fillPaint.color = 0x1523CB1F
+                            currentlyClickedPolygon = null
+                        }
+                    }
+
+                    if (jobTitles.any { PrefManager(this).jabatan?.contains(it) == true }) {
+                        resetMarker(false)
+                    }
+
+                    maxActTrees = 20
+                    tvPokokMaps.text =
+                        if (markerIds.isNotEmpty()) "${markerIds.size}/$maxActTrees" else "-"
+                    modeAct = 2
+
+                    Toasty.success(
+                        this@MapsActivity,
+                        "Penanganan beberapa titik berhasil dipilih!",
+                        Toasty.LENGTH_LONG
+                    )
+                        .show()
+                    setColorFButton()
+                }
+            }
+
+            onAddButtonClicked(buttonData2)
+        }
+
+        fbSingle.setOnClickListener {
+            if (modeAct == 1) {
+                Toasty.warning(
+                    this@MapsActivity,
+                    "Anda telah memilih pilihan ini.",
+                    Toasty.LENGTH_LONG
+                )
+                    .show()
+            } else {
+                AlertDialogUtility.withTwoActions(
+                    this@MapsActivity,
+                    "Batal",
+                    "Ya",
+                    "Apakah anda ingin melakukan penanganan per titik?",
+                    "warning.json"
+                ) {
+                    if (modeAct == 2) {
+                        if (jobTitles.any { PrefManager(this).jabatan?.contains(it) == true }) resetMarker(
+                            false
+                        ) else resetMarker(true)
+                    } else if (modeAct == 3) {
+                        if (currentlyClickedPolygon != null) {
+                            markerIds.clear()
+                            markerAfd.clear()
+                            markerBlok.clear()
+                            markerCons.clear()
+                            markerStats.clear()
+                            currentlyClickedPolygon!!.fillPaint.color = 0x1523CB1F
+                            currentlyClickedPolygon = null
+                        }
+                    }
+
+                    if (jobTitles.any { PrefManager(this).jabatan?.contains(it) == true }) {
+                        resetMarker(false)
+                    }
+
+                    maxActTrees = 1
+                    tvPokokMaps.text =
+                        if (markerIds.isNotEmpty()) "${markerIds.size}/$maxActTrees" else "-"
+                    modeAct = 1
+
+                    Toasty.success(
+                        this@MapsActivity,
+                        "Penanganan per titik berhasil dipilih!",
+                        Toasty.LENGTH_LONG
+                    )
+                        .show()
+                    setColorFButton()
+                }
+            }
+
+            onAddButtonClicked(buttonData2)
+        }
 
         getLocYellowTrees()
+    }
+
+    private fun isPointInsidePolygon(point: GeoPoint, polygon: List<GeoPoint>): Boolean {
+        var inside = false
+        val x = point.longitude
+        val y = point.latitude
+
+        for (i in 0 until polygon.size - 1) {
+            val xi = polygon[i].longitude
+            val yi = polygon[i].latitude
+            val xi1 = polygon[i + 1].longitude
+            val yi1 = polygon[i + 1].latitude
+
+            if (((yi <= y && y < yi1) || (yi1 <= y && y < yi)) &&
+                (x < (xi1 - xi) * (y - yi) / (yi1 - yi) + xi)
+            ) {
+                inside = !inside
+            }
+        }
+
+        return inside
     }
 
     private val sensorListener = object : SensorEventListener {
@@ -340,6 +882,77 @@ open class MapsActivity : AppCompatActivity() {
 
         override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
 
+        }
+    }
+
+    private fun resetMarker(single: Boolean) {
+        if (markerIds.isNotEmpty()) {
+            var exceptLastId =
+                if (single) markerIds.dropLast(1).toTypedArray() else markerIds.toTypedArray()
+            var exceptLastCon =
+                if (single) markerCons.dropLast(1).toTypedArray() else markerCons.toTypedArray()
+            var exceptLastStat =
+                if (single) markerStats.dropLast(1).toTypedArray() else markerStats.toTypedArray()
+
+            if (single) {
+                val lastElementId = markerIds.last()
+                markerIds.clear()
+                markerIds.add(lastElementId)
+
+                val lastElementAfd = markerAfd.last()
+                markerAfd.clear()
+                markerAfd.add(lastElementAfd)
+
+                val lastElementBlok = markerBlok.last()
+                markerBlok.clear()
+                markerBlok.add(lastElementBlok)
+
+                val lastElementCon = markerCons.last()
+                markerCons.clear()
+                markerCons.add(lastElementCon)
+
+                val lastElementStat = markerStats.last()
+                markerStats.clear()
+                markerStats.add(lastElementStat)
+            } else {
+                markerIds.clear()
+                markerAfd.clear()
+                markerBlok.clear()
+                markerCons.clear()
+                markerStats.clear()
+            }
+
+            var drawable: Drawable? = null
+            for (j in exceptLastId.indices) {
+                for (myMarker in markerMap.values) {
+                    if (myMarker.id == exceptLastId[j].toString()) {
+                        drawable = ContextCompat.getDrawable(
+                            this,
+                            if (exceptLastStat[j] == "Terverifikasi") R.drawable.baseline_check_circle_24 else if (exceptLastStat[j] == "Sudah" || exceptLastCon[j] == "Sembuh") R.drawable.baseline_circle_24 else R.drawable.ic_close
+                        )
+                        val color = ContextCompat.getColor(
+                            this,
+                            if (exceptLastStat[j] == "Terverifikasi") {
+                                R.color.colorGreen_A400
+                            } else if (exceptLastStat[j] == "Sudah") {
+                                R.color.green1
+                            } else if (exceptLastCon[j] == "Pucat") {
+                                R.color.grey_default
+                            } else if (exceptLastCon[j] == "Ringan") {
+                                R.color.dashboard
+                            } else if (exceptLastCon[j] == "Berat") {
+                                R.color.colorRed_A400
+                            } else {
+                                R.color.blue1
+                            }
+                        )
+                        drawable?.setColorFilter(color, PorterDuff.Mode.SRC_ATOP)
+
+                        myMarker.icon = drawable
+                        mapView.invalidate()
+                    }
+                }
+            }
         }
     }
 
@@ -367,6 +980,16 @@ open class MapsActivity : AppCompatActivity() {
                                     modelMain.kondisiPk = item.getString("kondisi")
                                     modelMain.statusPk = item.getString("status")
                                     modelMain.tglPk = item.getString("tgl_foto_udara")
+                                    modelMain.perlakuanPk = try {
+                                        item.getString("perlakuan")
+                                    } catch (e: Exception) {
+                                        ""
+                                    }
+                                    modelMain.tglPerlakuanPk = try {
+                                        item.getString("tanggal")
+                                    } catch (e: Exception) {
+                                        ""
+                                    }
                                     val fixLatLn =
                                         item.getString("latln").replace(" ", "").split(",")
                                             .toTypedArray()
@@ -390,6 +1013,16 @@ open class MapsActivity : AppCompatActivity() {
                                     modelMain.kondisiPk = item.getString("kondisi")
                                     modelMain.statusPk = item.getString("status")
                                     modelMain.tglPk = item.getString("tgl_foto_udara")
+                                    modelMain.perlakuanPk = try {
+                                        item.getString("perlakuan")
+                                    } catch (e: Exception) {
+                                        ""
+                                    }
+                                    modelMain.tglPerlakuanPk = try {
+                                        item.getString("tanggal")
+                                    } catch (e: Exception) {
+                                        ""
+                                    }
                                     val fixLatLn =
                                         item.getString("latln").replace(" ", "").split(",")
                                             .toTypedArray()
@@ -409,6 +1042,16 @@ open class MapsActivity : AppCompatActivity() {
                                 modelMain.kondisiPk = item.getString("kondisi")
                                 modelMain.statusPk = item.getString("status")
                                 modelMain.tglPk = item.getString("tgl_foto_udara")
+                                modelMain.perlakuanPk = try {
+                                    item.getString("perlakuan")
+                                } catch (e: Exception) {
+                                    ""
+                                }
+                                modelMain.tglPerlakuanPk = try {
+                                    item.getString("tanggal")
+                                } catch (e: Exception) {
+                                    ""
+                                }
                                 val fixLatLn =
                                     item.getString("latln").replace(" ", "").split(",")
                                         .toTypedArray()
@@ -434,41 +1077,114 @@ open class MapsActivity : AppCompatActivity() {
     @SuppressLint("SetTextI18n", "ResourceType")
     private fun initMarker(modelList: List<ModelMain>) {
         runOnUiThread {
+            val prefManager = PrefManager(this)
+
+            val arrBelum = ArrayList<Int>()
+            val arrSudah = ArrayList<Int>()
+
+            for (j in modelList.indices) {
+                if (modelList[j].statusPk == "Sudah") {
+                    arrSudah.add(j)
+                } else {
+                    arrBelum.add(j)
+                }
+            }
+
             for (i in modelList.indices) {
+                var selectedIcon =
+                    ContextCompat.getDrawable(
+                        this,
+                        if (modelList[i].statusPk == "Sudah" || modelList[i].kondisiPk == "Sembuh") R.drawable.baseline_check_circle_24 else R.drawable.baseline_close_circle_24
+                    )
                 var drawable = ContextCompat.getDrawable(
                     this,
-                    if (modelList[i].statusPk == "Sudah") R.drawable.baseline_circle_24 else R.drawable.ic_close
+                    if (modelList[i].statusPk == "Terverifikasi") R.drawable.baseline_check_circle_24 else if (modelList[i].statusPk == "Sudah" || modelList[i].kondisiPk == "Sembuh") R.drawable.baseline_circle_24 else R.drawable.ic_close
                 )
                 val color = ContextCompat.getColor(
                     this,
-                    if (modelList[i].statusPk == "Sudah") {
-                        R.color.chart_blue4
+                    if (modelList[i].statusPk == "Terverifikasi") {
+                        R.color.colorGreen_A400
+                    } else if (modelList[i].statusPk == "Sudah") {
+                        R.color.green1
                     } else if (modelList[i].kondisiPk == "Pucat") {
-                        R.color.yellow1
+                        R.color.grey_default
                     } else if (modelList[i].kondisiPk == "Ringan") {
                         R.color.dashboard
-                    } else {
+                    } else if (modelList[i].kondisiPk == "Berat") {
                         R.color.colorRed_A400
+                    } else {
+                        R.color.blue1
                     }
                 )
                 drawable?.setColorFilter(color, PorterDuff.Mode.SRC_ATOP)
+                selectedIcon?.setColorFilter(color, PorterDuff.Mode.SRC_ATOP)
 
-                // Resize icon status sudah ditangani
-                if (modelList[i].statusPk == "Sudah") {
-                    val widthInPixels = 50
-                    val heightInPixels = 50
-                    val bitmap = Bitmap.createBitmap(widthInPixels, heightInPixels, Bitmap.Config.ARGB_8888)
-                    val canvas = Canvas(bitmap)
-                    drawable?.setBounds(0, 0, widthInPixels, heightInPixels)
-                    drawable?.draw(canvas)
-                    drawable = BitmapDrawable(resources, bitmap)
+                val widthInPixels = 100
+                val heightInPixels = 100
+                val bitmap =
+                    Bitmap.createBitmap(widthInPixels, heightInPixels, Bitmap.Config.ARGB_8888)
+                val canvas = Canvas(bitmap)
+
+                selectedIcon?.setBounds(0, 0, widthInPixels, heightInPixels)
+                selectedIcon?.draw(canvas)
+                selectedIcon = BitmapDrawable(resources, bitmap)
+
+                val resultAction = ArrayList<String>()
+                val splitPerlakuan = modelList[i].perlakuanPk.split("$")
+                for (j in perlakuanIdArray.indices) {
+                    for (k in splitPerlakuan.indices) {
+                        if (splitPerlakuan[k] == perlakuanIdArray[j].toString()) {
+                            resultAction.add("- " + perlakuanArray[j])
+                        }
+                    }
                 }
 
-                val marker = Marker(mapView)
-                marker.icon = drawable
-                marker.position = GeoPoint(modelList[i].latPk, modelList[i].lonPk)
-                marker.title = modelList[i].idPk.toString()
-                marker.snippet = "$getEst - ${modelList[i].afdPk}"
+                var inputDate = modelList[i].tglPerlakuanPk
+                val inputFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale("id", "ID"))
+                val outputFormat = SimpleDateFormat("dd MMMM yyyy", Locale("id", "ID"))
+
+                try {
+                    val dateParse = inputFormat.parse(inputDate)
+                    inputDate = outputFormat.format(dateParse)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+
+                val snpAction =  if (resultAction.isNotEmpty()) {
+                    "<br>Jenis perlakuan:<br>" + resultAction.toTypedArray().contentToString()
+                        .replace("[", "").replace("]", "").replace(
+                            ", ",
+                            "<br>"
+                        )
+                } else {
+                    ""
+                }
+                val snpDate = if (inputDate.isNotEmpty()) {
+                    "<br>Tanggal perlakuan:<br>$inputDate"
+                } else {
+                    ""
+                }
+                val snippetAction = if (snpAction.isNotEmpty() && snpDate.isNotEmpty()) {
+                    "$snpAction<br>$snpDate"
+                } else {
+                    "$snpAction$snpDate"
+                }
+
+                val yellowMarkers = Marker(mapView)
+                yellowMarkers.id = modelList[i].idPk.toString()
+                yellowMarkers.icon = drawable
+                yellowMarkers.position = GeoPoint(modelList[i].latPk, modelList[i].lonPk)
+                yellowMarkers.title = if ((modelList[i].statusPk == "Belum" && modelList[i].kondisiPk != "Sembuh") || snippetAction.isEmpty()) {
+                    modelList[i].idPk.toString()
+                } else {
+                    modelList[i].idPk.toString() + "\n$getEst - ${modelList[i].afdPk}"
+                }
+                yellowMarkers.snippet = if ((modelList[i].statusPk == "Belum" && modelList[i].kondisiPk != "Sembuh") || snippetAction.isEmpty()) {
+                    "$getEst - ${modelList[i].afdPk}"
+                } else {
+                    snippetAction
+                }
+                yellowMarkers.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
 
                 val formattedDate = SimpleDateFormat("MMM yyyy", Locale("id", "ID"))
                 tvTglFotoMaps.text = formattedDate.format(
@@ -477,73 +1193,135 @@ open class MapsActivity : AppCompatActivity() {
                         Locale.ENGLISH
                     ).parse(modelList[i].tglPk)!!
                 )
-                tvJmlPkMaps.text = modelList.size.toString()
+                tvJmlPkMaps.text = "${arrSudah.size}/${arrBelum.size}"
                 tvBlokMaps.text = if (getBlok.isNotEmpty()) getBlok else "-"
 
-                marker.setOnMarkerClickListener(object : Marker.OnMarkerClickListener {
+                yellowMarkers.setOnMarkerClickListener(object : Marker.OnMarkerClickListener {
                     override fun onMarkerClick(marker: Marker, mapView: MapView): Boolean {
-                        if (lastClickedMarker != null) {
-                            lastClickedMarker?.closeInfoWindow()
-                        }
+                        if (maxActTrees != 0 && (modeAct == 1 || modeAct == 2 || modeAct == 4)) {
+                            if (marker == lastClickedMarker) {
+                                mapView.overlays.remove(previousDashedLine)
+                                lastClickedMarker?.closeInfoWindow()
+                                previousDashedLine = null
+                                lastClickedMarker = null
+                                latPk = null
+                                lonPk = null
+                                tvJarakMaps.text = "-"
+                                tvJarakMaps.setTextColor(Color.BLACK)
+                            } else {
+                                val latCurrent = try {
+                                    lat!!.toDouble()
+                                } catch (e: Exception) {
+                                    0.0
+                                }
+                                val lonCurrent = try {
+                                    lon!!.toDouble()
+                                } catch (e: Exception) {
+                                    0.0
+                                }
 
-                        lastClickedMarker = marker
-                        tvBlokMaps.text = modelList[i].blokPk
-                        tvKondisiMaps.text = modelList[i].kondisiPk
-                        tvStatusMaps.text = modelList[i].statusPk + " ditangani"
+                                lastClickedMarker = marker
 
-                        latPk = modelList[i].latPk
-                        lonPk = modelList[i].lonPk
-                        rangePos()
+                                latPk = modelList[i].latPk
+                                lonPk = modelList[i].lonPk
 
-                        marker.showInfoWindow()
+                                createDashLineOverlay(latCurrent, lonCurrent, latPk!!, lonPk!!)
+                                rangePos()
 
-                        cvFUMaps.visibility = if (modelList[i].statusPk == "Belum") View.VISIBLE else View.GONE
-                        cvFUMaps.setOnClickListener {
-                            if (firstGPS) {
-                                if (fixAccuracy > 10 || accuracyRange > 21) {
-                                    AlertDialogUtility.withTwoActions(
-                                        this@MapsActivity,
-                                        "BATAL",
-                                        "LANJUT",
-                                        "GPS belum memenuhi syarat.\nLanjut memulai pemupukan?",
-                                        "warning.json"
-                                    ) {
-                                        val intent =
-                                            Intent(
+                                marker.showInfoWindow()
+                            }
+
+                            marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+
+                            val markerId = modelList[i].idPk
+                            val markerAfdl = modelList[i].afdPk
+                            val markerBloks = modelList[i].blokPk
+                            val markerCon = modelList[i].kondisiPk
+                            val markerStat = modelList[i].statusPk
+
+                            fun processMarker() {
+                                if (isProgrammer || (accuracyRange <= minRangeAct)) {
+                                    if (markerIds.size < maxActTrees || markerIds.contains(markerId)) {
+                                        if (markerIds.contains(markerId)) {
+                                            markerIds.remove(markerId)
+                                            markerAfd.remove(markerAfdl)
+                                            markerBlok.remove(markerBloks)
+                                            markerCons.remove(markerCon)
+                                            markerStats.remove(markerStat)
+                                            marker.icon = drawable
+                                        } else {
+                                            if (markerIds.size == maxActTrees) {
+                                                markerIds.remove(markerId)
+                                                markerAfd.remove(markerAfdl)
+                                                markerBlok.remove(markerBloks)
+                                                markerCons.remove(markerCon)
+                                                markerStats.remove(markerStat)
+                                                marker.icon = drawable
+                                            }
+                                            markerIds.add(markerId)
+                                            markerAfd.add(markerAfdl)
+                                            markerBlok.add(markerBloks)
+                                            markerCons.add(markerCon)
+                                            markerStats.add(markerStat)
+                                            marker.icon = selectedIcon
+                                        }
+                                    } else {
+                                        if (marker == lastClickedMarker) {
+                                            val textMax =
+                                                if (isProgrammer || jobTitles.any { prefManager.jabatan?.contains(it) == true }) "memverifikasi" else "menangani"
+                                            Toasty.warning(
                                                 this@MapsActivity,
-                                                HandlingFormActivity::class.java
-                                            )
-                                                .putExtra("id", modelList[i].idPk.toString())
-                                                .putExtra("est", getEst)
-                                                .putExtra("afd", modelList[i].afdPk)
-                                                .putExtra("blok", modelList[i].blokPk)
-                                                .putExtra("kondisi", modelList[i].kondisiPk)
-                                                .putExtra("gps", "GL")
-                                        startActivity(intent)
-                                        finishAffinity()
+                                                "Maksimal hanya dapat $textMax $maxActTrees titik!"
+                                            ).show()
+                                        }
                                     }
                                 } else {
-                                    val intent =
-                                        Intent(
-                                            this@MapsActivity,
-                                            HandlingFormActivity::class.java
-                                        )
-                                            .putExtra("id", modelList[i].idPk.toString())
-                                            .putExtra("est", getEst)
-                                            .putExtra("afd", modelList[i].afdPk)
-                                            .putExtra("blok", modelList[i].blokPk)
-                                            .putExtra("kondisi", modelList[i].kondisiPk)
-                                            .putExtra("gps", "GA")
-                                    startActivity(intent)
-                                    finishAffinity()
+                                    Toasty.warning(
+                                        this@MapsActivity,
+                                        "Anda belum berada di dekat titik!"
+                                    ).show()
                                 }
+                            }
+
+                            if (isProgrammer || jobTitles.any { prefManager.jabatan?.contains(it) == true }) {
+                                if (modeAct != 4) {
+                                    if (markerStat == "Sudah" || (markerStat != "Terverifikasi" && markerCon == "Sembuh")) {
+                                        processMarker()
+                                    }
+                                } else {
+                                    if (modeAct != 0) {
+                                        if ((markerCon == "Berat" || markerCon == "Ringan" || markerCon == "Pucat") && markerStat == "Belum") {
+                                            processMarker()
+                                        }
+                                    }
+                                }
+                            } else {
+                                if ((markerCon == "Berat" || markerCon == "Ringan" || markerCon == "Pucat") && markerStat == "Belum") {
+                                    processMarker()
+                                }
+                            }
+
+                            tvBlokMaps.text = markerBloks
+                            tvKondisiMaps.text = if (marker == lastClickedMarker) markerCon else "-"
+                            tvStatusMaps.text = if (marker == lastClickedMarker) {
+                                markerStat + if (markerStat != "Terverifikasi") " ditangani" else ""
+                            } else {
+                                "-"
+                            }
+                            tvPokokMaps.text = "${markerIds.size}/$maxActTrees"
+
+                            mapView.invalidate()
+                        } else {
+                            if (modeAct == 3) {
+                                Toasty.warning(
+                                    this@MapsActivity,
+                                    "Jenis penanganan telah dipilih berdasarkan blok!"
+                                ).show()
                             } else {
                                 Toasty.warning(
                                     this@MapsActivity,
-                                    "Titik GPS belum didapatkan!",
-                                    Toasty.LENGTH_LONG
-                                )
-                                    .show()
+                                    "Silakan pilih jenis penanganan terlebih dahulu!"
+                                ).show()
                             }
                         }
 
@@ -551,8 +1329,171 @@ open class MapsActivity : AppCompatActivity() {
                     }
                 })
 
-                mapView.overlays.add(marker)
+                mapView.overlays.add(yellowMarkers)
                 mapView.invalidate()
+
+                markerMap[yellowMarkers.id] = yellowMarkers
+            }
+        }
+    }
+
+    private fun getCommaSeparatedExtraData(list: List<Any>): String {
+        return list.joinToString("$") { it.toString() }
+    }
+
+    private fun getAvailableRAM(context: Context): Long {
+        val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        val memoryInfo = ActivityManager.MemoryInfo()
+        activityManager.getMemoryInfo(memoryInfo)
+        return memoryInfo.availMem / (1024 * 1024 * 1024)
+    }
+
+    private fun insertData() {
+        val pm = PrefManagerEstate(this)
+        val pmPrevCons = try {
+            pm.prevCons!!
+        } catch (e: Exception) {
+            ""
+        }
+        val arrPrevCons = ArrayList<String>()
+        if (pmPrevCons.isNotEmpty()) {
+            val splitPrevCons = pm.prevCons!!.replace("[", "").replace("]", "").replace(" ", "").split(",")
+            for (a in splitPrevCons.indices) {
+                arrPrevCons.add(splitPrevCons[a])
+            }
+        }
+
+        val databaseHandler = PemupukanSQL(this)
+        val splitIdPk = getCommaSeparatedExtraData(markerIds).split("$")
+        val splitAfdPk = getCommaSeparatedExtraData(markerAfd).split("$")
+        val splitBlokPk = getCommaSeparatedExtraData(markerBlok).split("$")
+        val splitConsPk = getCommaSeparatedExtraData(markerCons).split("$")
+        val splitStatsPk = getCommaSeparatedExtraData(markerStats).split("$")
+        for (a in splitIdPk.indices) {
+            if (splitIdPk[a].isNotEmpty()) {
+                val dateNow = SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(
+                    Calendar.getInstance().time
+                )
+
+                val status = databaseHandler.addPokokKuning(
+                    idPk = splitIdPk[a].toInt(),
+                    estate = getEst,
+                    afdeling = splitAfdPk[a],
+                    blok = splitBlokPk[a],
+                    status = "Terverifikasi",
+                    kondisi = splitConsPk[a],
+                    datetime = dateNow,
+                    jenisPupukId = "",
+                    foto = "",
+                    komen = "",
+                    app_ver = ""
+                )
+
+                if (status > -1) {
+                    val pkPath =
+                        this.getExternalFilesDir(null)?.absolutePath + "/MAIN/pk" + PrefManager(
+                            this
+                        ).dataReg!!
+                    val fileMaps = File(pkPath)
+                    if (fileMaps.exists()) {
+                        try {
+                            val readMaps = fileMaps.readText()
+                            val objMaps = JSONObject(readMaps)
+
+                            val estObjMaps =
+                                objMaps.getJSONObject(getEst)
+                            val afdObjMaps =
+                                estObjMaps.getJSONObject(splitAfdPk[a])
+                            val blokObjMaps =
+                                afdObjMaps.getJSONObject(splitBlokPk[a])
+                            for (index in blokObjMaps.keys()) {
+                                val item =
+                                    blokObjMaps.getJSONObject(index)
+                                if (splitIdPk[a] == index) {
+                                    if (splitStatsPk[a] == "Sudah" || splitConsPk[a] == "Sembuh") {
+                                        arrPrevCons.removeIf { it.contains(splitIdPk[a]) }
+                                        val tglAct = if (item.has("tanggal")) {
+                                            "$${item.getString("tanggal").replace(" ", "|")}"
+                                        } else {
+                                            "$"
+                                        }
+                                        arrPrevCons.add("${splitIdPk[a]}$${item.getString("kondisi")}$${item.getString("status")}$tglAct")
+                                    }
+
+                                    item.put("status", "Terverifikasi")
+                                    item.put("tanggal", dateNow)
+                                }
+                            }
+                            fileMaps.writeText(objMaps.toString())
+
+                            if (a == splitIdPk.size - 1) {
+                                inserting = false
+                                runOnUiThread {
+                                    stopLocationUpdates()
+                                    if (mapView != null) {
+                                        mapView.onPause()
+                                    }
+
+                                    AlertDialogUtility.withSingleAction(
+                                        this,
+                                        "OK",
+                                        "Data pokok kuning berhasil disimpan!",
+                                        "success.json"
+                                    ) {
+                                        if (arrPrevCons.isNotEmpty()) {
+                                            pm.prevCons =
+                                                arrPrevCons.toTypedArray().contentToString()
+                                        }
+
+                                        Toasty.info(this, "Mohon tunggu, sedang memproses peta kembali..", Toasty.LENGTH_LONG).show()
+
+                                        val intent =
+                                            Intent(this, MapsActivity::class.java).putExtra("est", getEst)
+                                                .putExtra("afd", getAfd)
+                                                .putExtra("blok", getBlok)
+                                                .putExtra("blokPlot", getBlokPlot)
+                                                .putExtra("pos", "$lat$$lon")
+                                        startActivity(intent)
+                                        finishAffinity()
+                                    }
+                                }
+                            }
+                        } catch (e: Exception) {
+                            inserting = false
+                            runOnUiThread {
+                                Toasty.warning(
+                                    this@MapsActivity,
+                                    "Terjadi kesalahan, hubungi pengembang. Error: $e",
+                                    Toasty.LENGTH_LONG
+                                )
+                                    .show()
+                            }
+                            e.printStackTrace()
+                            break
+                        }
+                    } else {
+                        inserting = false
+                        runOnUiThread {
+                            Toasty.warning(
+                                this@MapsActivity,
+                                "File JSON tidak ditemukan!",
+                                Toasty.LENGTH_LONG
+                            )
+                                .show()
+                        }
+                        break
+                    }
+                } else {
+                    inserting = false
+                    runOnUiThread {
+                        AlertDialogUtility.alertDialog(
+                            this,
+                            "Terjadi kesalahan, hubungi pengembang",
+                            "warning.json"
+                        )
+                    }
+                    break
+                }
             }
         }
     }
@@ -563,6 +1504,60 @@ open class MapsActivity : AppCompatActivity() {
         } catch (e: Exception) {
             ""
         }
+    }
+
+    private fun onAddButtonClicked(data: Triple<Array<FloatingActionButton>, Array<Boolean>, View>) {
+        val (buttons, isClickable, menuButton) = data
+        val (rotateOpen, rotateClose) = if (menuButton == fbMenu1Maps) animations1 else animations2
+        val (fromBottom, toBottom) = if (menuButton == fbMenu1Maps) animationsDrop1 else animationsDrop2
+
+        buttons.forEachIndexed { index, button ->
+            isClickable[index] = !isClickable[index]
+
+            if (!isClickable[index]) {
+                button.visibility = View.VISIBLE
+                button.isClickable = true
+                button.startAnimation(fromBottom)
+            } else {
+                button.visibility = View.GONE
+                button.isClickable = false
+                button.startAnimation(toBottom)
+            }
+        }
+
+        menuButton.startAnimation(if (!isClickable[0]) rotateOpen else rotateClose)
+    }
+
+    private fun setColorFButton() {
+        fbMenu1Maps.backgroundTintList =
+            ContextCompat.getColorStateList(this, R.color.colorPurple)
+        fbCenterMaps.backgroundTintList =
+            ContextCompat.getColorStateList(this, R.color.chart_blue4)
+        fbActionMaps.backgroundTintList =
+            ContextCompat.getColorStateList(this, R.color.green_basiccolor)
+
+        fbMenu2Maps.backgroundTintList =
+            ContextCompat.getColorStateList(this, R.color.colorRed_A400)
+        fbPokokSembuh.backgroundTintList =
+            ContextCompat.getColorStateList(
+                this,
+                if (modeAct == 4) R.color.grey_default else R.color.darkGreenColor
+            )
+        fbBlok.backgroundTintList =
+            ContextCompat.getColorStateList(
+                this,
+                if (modeAct == 3) R.color.grey_default else R.color.blokAct
+            )
+        fbMultiple.backgroundTintList =
+            ContextCompat.getColorStateList(
+                this,
+                if (modeAct == 2) R.color.grey_default else R.color.dashboard
+            )
+        fbSingle.backgroundTintList =
+            ContextCompat.getColorStateList(
+                this,
+                if (modeAct == 1) R.color.grey_default else R.color.singleAct
+            )
     }
 
     public override fun onResume() {
@@ -578,7 +1573,11 @@ open class MapsActivity : AppCompatActivity() {
             requestPermissions()
         }
         val orientationSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ORIENTATION)
-        sensorManager.registerListener(sensorListener, orientationSensor, SensorManager.SENSOR_DELAY_NORMAL)
+        sensorManager.registerListener(
+            sensorListener,
+            orientationSensor,
+            SensorManager.SENSOR_DELAY_NORMAL
+        )
     }
 
     public override fun onPause() {
@@ -594,6 +1593,9 @@ open class MapsActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         stopLocationUpdates()
+        if (mapView != null) {
+            mapView.onPause()
+        }
     }
 
     @Deprecated("Deprecated in Java")
@@ -606,6 +1608,10 @@ open class MapsActivity : AppCompatActivity() {
             "warning.json"
         ) {
             stopLocationUpdates()
+            if (mapView != null) {
+                mapView.onPause()
+            }
+
             val intent = Intent(this, MainActivity::class.java)
             startActivity(intent)
             finishAffinity()
@@ -697,7 +1703,7 @@ open class MapsActivity : AppCompatActivity() {
                         val intent = Intent()
                         intent.action = Settings.ACTION_APPLICATION_DETAILS_SETTINGS
                         val uri = Uri.fromParts(
-                            "co.id.ssms.mobilepro",
+                            "com.srs.deficiencytracker",
                             BuildConfig.APPLICATION_ID, null
                         )
                         intent.data = uri
@@ -781,6 +1787,9 @@ open class MapsActivity : AppCompatActivity() {
                 }
 
                 updateMarkerPosition(lat!!.toDouble(), lon!!.toDouble())
+                if (latPk != null) {
+                    createDashLineOverlay(lat!!.toDouble(), lon!!.toDouble(), latPk!!, lonPk!!)
+                }
             }
 
             val accuracyInMeters = mCurrentLocation!!.accuracy
@@ -850,50 +1859,83 @@ open class MapsActivity : AppCompatActivity() {
             }
     }
 
-    private fun updateMarkerPosition(newLat: Double, newLng: Double) {
-        currentMarker?.let {
-            mapView.overlays.remove(it)
-        }
-
-        var originalDrawable = ContextCompat.getDrawable(this, R.drawable.baseline_navigation_24)
-        val color = ContextCompat.getColor(this, R.color.colorPrimaryDark)
-        originalDrawable?.let {
-            DrawableCompat.setTint(it, color)
-        }
-
-        val widthInPixels = 100
-        val heightInPixels = 100
-        val bitmap = Bitmap.createBitmap(widthInPixels, heightInPixels, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bitmap)
-        originalDrawable?.setBounds(0, 0, widthInPixels, heightInPixels)
-        originalDrawable?.draw(canvas)
-        originalDrawable = BitmapDrawable(resources, bitmap)
-
-        val newMarker = Marker(mapView)
-        newMarker.icon = originalDrawable
-        newMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
-        newMarker.position = GeoPoint(newLat, newLng)
-        newMarker.rotation = 0f
-
-        newMarker.setOnMarkerClickListener(object : Marker.OnMarkerClickListener {
-            override fun onMarkerClick(marker: Marker, mapView: MapView): Boolean {
-                return true
+    private fun createDashLineOverlay(
+        newLat: Double,
+        newLng: Double,
+        latPk: Double,
+        lonPk: Double
+    ) {
+        try {
+            previousDashedLine?.let {
+                mapView.overlays.remove(it)
             }
-        })
 
-        mapView.overlays.add(newMarker)
-        currentMarker = newMarker
+            val startPoint = GeoPoint(newLat, newLng)
+            val endPoint = GeoPoint(latPk, lonPk)
 
-        mapView.invalidate()
+            val points = listOf(startPoint, endPoint)
+            val dashedLineOverlay = DashedLineOverlay(points, mapView)
+
+            previousDashedLine = dashedLineOverlay
+
+            mapView.overlays.add(dashedLineOverlay)
+            mapView.invalidate()
+        } catch (e: Exception) {
+            Log.e("ET", "Error dash line: $e")
+        }
+    }
+
+    private fun updateMarkerPosition(newLat: Double, newLng: Double) {
+        try {
+            currentMarker?.let {
+                mapView.overlays.remove(it)
+            }
+
+            var originalDrawable =
+                ContextCompat.getDrawable(this, R.drawable.baseline_navigation_24)
+            val color = ContextCompat.getColor(this, R.color.blue1)
+            originalDrawable?.let {
+                DrawableCompat.setTint(it, color)
+            }
+
+            val widthInPixels = 100
+            val heightInPixels = 100
+            val bitmap = Bitmap.createBitmap(widthInPixels, heightInPixels, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bitmap)
+            originalDrawable?.setBounds(0, 0, widthInPixels, heightInPixels)
+            originalDrawable?.draw(canvas)
+            originalDrawable = BitmapDrawable(resources, bitmap)
+
+            val newMarker = Marker(mapView)
+            newMarker.icon = originalDrawable
+            newMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+            newMarker.position = GeoPoint(newLat, newLng)
+            newMarker.rotation = 0f
+
+            newMarker.setOnMarkerClickListener(object : Marker.OnMarkerClickListener {
+                override fun onMarkerClick(marker: Marker, mapView: MapView): Boolean {
+                    return true
+                }
+            })
+
+            mapView.overlays.add(newMarker)
+            currentMarker = newMarker
+
+            mapView.invalidate()
+        } catch (e: Exception) {
+            Log.e("ET", "Error mapview: $e")
+        }
     }
 
     private fun rangePos() {
         if (latPk != null) {
-            val (rangeKm, rangeM) = rangeTreeAndCurrentPos(GeoPoint(latPk!!, lonPk!!),
-                GeoPoint(lat!!.toDouble(), lon!!.toDouble()))
+            val (rangeKm, rangeM) = rangeTreeAndCurrentPos(
+                GeoPoint(latPk!!, lonPk!!),
+                GeoPoint(lat!!.toDouble(), lon!!.toDouble())
+            )
             accuracyRange = rangeM
             tvJarakMaps.text = rangeKm
-            if (accuracyRange > 21) {
+            if (accuracyRange > minRangeAct) {
                 tvJarakMaps.setTextColor(Color.RED)
             } else {
                 tvJarakMaps.setTextColor(
@@ -927,6 +1969,76 @@ open class MapsActivity : AppCompatActivity() {
         }
 
         return formattedDistanceKilometers to distanceInMeters.toInt()
+    }
+
+    @SuppressLint("Range")
+    private fun getListPupuk() {
+        val selectQuery =
+            "SELECT  * FROM ${PemupukanSQL.db_tabPupuk} ORDER BY ${PemupukanSQL.db_namaPupuk} ASC"
+        val db = PemupukanSQL(this).readableDatabase
+        val i: Cursor?
+        try {
+            i = db.rawQuery(selectQuery, null)
+            if (i.moveToFirst()) {
+                do {
+                    perlakuanArray.add(
+                        try {
+                            i.getString(i.getColumnIndex(PemupukanSQL.db_namaPupuk))
+                        } catch (e: Exception) {
+                            ""
+                        }
+                    )
+                    perlakuanIdArray.add(
+                        try {
+                            i.getInt(i.getColumnIndex(PemupukanSQL.db_id))
+                        } catch (e: Exception) {
+                            0
+                        }
+                    )
+                } while (i!!.moveToNext())
+            }
+        } catch (e: SQLiteException) {
+            Log.e("ET", "Error: $e")
+        }
+    }
+
+    private fun calculateCenter(geoPoints: List<GeoPoint>): GeoPoint? {
+        if (geoPoints.isEmpty()) {
+            return null
+        }
+
+        var latMax = 0.0
+        var latMin = 0.0
+        var lonMax = 0.0
+        var lonMin = 0.0
+        var first = true
+
+        for (geoBlok in geoPoints) {
+            if (first) {
+                latMax = geoBlok.latitude
+                latMin = geoBlok.latitude
+                lonMax = geoBlok.longitude
+                lonMin = geoBlok.longitude
+                first = false
+            } else {
+                if (latMax < geoBlok.latitude) {
+                    latMax = geoBlok.latitude
+                } else if (latMin > geoBlok.latitude) {
+                    latMin = geoBlok.latitude
+                }
+
+                if (lonMax < geoBlok.longitude) {
+                    lonMax = geoBlok.longitude
+                } else if (lonMin > geoBlok.longitude) {
+                    lonMin = geoBlok.longitude
+                }
+            }
+        }
+
+        val latCen = (latMax + latMin) / 2
+        val lonCen = (lonMax + lonMin) / 2
+
+        return GeoPoint(latCen, lonCen)
     }
 
     companion object {

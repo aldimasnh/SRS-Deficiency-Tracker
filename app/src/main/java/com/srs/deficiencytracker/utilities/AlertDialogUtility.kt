@@ -85,7 +85,7 @@ class AlertDialogUtility {
         }
 
         @SuppressLint("InflateParams")
-        fun withCheckBox(context: Context, dismiss: String, action: String, alertText: String, listData: String, attention: String, checkBoxText: String, dismissFunction: () -> Unit, function: () -> Unit, missNotif: Boolean? = false) {
+        fun withCheckBox(context: Context, dismiss: String, action: String, alertText: String, listData: String, attention: String, checkBoxText: String, dismissFunction: (() -> Unit)?, function: (() -> Unit)?, missNotif: Boolean? = false) {
             if (context is Activity && !context.isFinishing) {
                 val layoutBuilder =
                     LayoutInflater.from(context).inflate(R.layout.dialog_layout_success, null)
@@ -108,12 +108,16 @@ class AlertDialogUtility {
                 layoutBuilder.btn_dismiss.text = dismiss
                 layoutBuilder.btn_action.text = action
                 layoutBuilder.btn_dismiss.setOnClickListener {
-                    dismissFunction()
+                    if (dismissFunction != null) {
+                        dismissFunction()
+                    }
                     alertDialog.dismiss()
                 }
                 layoutBuilder.btn_action.setOnClickListener {
                     if (layoutBuilder.cb_confirmation.isChecked) {
-                        function()
+                        if (function != null) {
+                            function()
+                        }
                         alertDialog.dismiss()
                     } else {
                         Toasty.warning(context, "Harap centang kotak konfirmasi terlebih dahulu!!").show()

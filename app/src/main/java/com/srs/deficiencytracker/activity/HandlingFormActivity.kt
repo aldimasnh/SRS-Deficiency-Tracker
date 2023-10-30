@@ -7,46 +7,32 @@ import android.content.Intent
 import android.content.res.ColorStateList
 import android.database.Cursor
 import android.database.sqlite.SQLiteException
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import android.graphics.Canvas
-import android.graphics.Color
-import android.graphics.ImageFormat
-import android.graphics.Matrix
-import android.graphics.Paint
-import android.graphics.SurfaceTexture
-import android.hardware.camera2.CameraCaptureSession
-import android.hardware.camera2.CameraCharacteristics
-import android.hardware.camera2.CameraDevice
-import android.hardware.camera2.CameraManager
-import android.hardware.camera2.CaptureRequest
+import android.graphics.*
+import android.hardware.camera2.*
 import android.media.ImageReader
 import android.net.Uri
-import android.os.Bundle
-import android.os.Environment
-import android.os.Handler
-import android.os.HandlerThread
-import android.os.Looper
+import android.os.*
+import android.text.Editable
+import android.text.TextWatcher
 import android.util.Log
 import android.util.Rational
 import android.util.Size
+import android.util.TypedValue
 import android.view.Surface
 import android.view.TextureView
 import android.view.View
-import android.view.ViewGroup
 import android.view.WindowManager
 import android.view.inputmethod.InputMethodManager
-import android.widget.RelativeLayout
-import android.widget.Toast
+import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.content.res.ResourcesCompat
-import androidx.core.widget.addTextChangedListener
 import androidx.exifinterface.media.ExifInterface
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.daimajia.androidanimations.library.Techniques
 import com.daimajia.androidanimations.library.YoYo
+import com.google.android.material.chip.Chip
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.jaredrummler.materialspinner.MaterialSpinner
 import com.leinardi.android.speeddial.SpeedDialActionItem
@@ -59,57 +45,48 @@ import com.srs.deficiencytracker.utilities.AlertDialogUtility
 import com.srs.deficiencytracker.utilities.FileMan
 import com.srs.deficiencytracker.utilities.PrefManager
 import com.srs.deficiencytracker.utilities.PrefManagerEstate
+import com.srs.deficiencytracker.utilities.UpdateMan
 import es.dmoral.toasty.Toasty
-import kotlinx.android.synthetic.main.activity_camera.view.camApi
-import kotlinx.android.synthetic.main.activity_camera.view.captureCam
-import kotlinx.android.synthetic.main.activity_camera.view.torchButton
-import kotlinx.android.synthetic.main.activity_form_est.sp_est_form
-import kotlinx.android.synthetic.main.activity_foto_temuan.view.cvTemuan2
-import kotlinx.android.synthetic.main.activity_foto_temuan.view.et_komentar_temuan
-import kotlinx.android.synthetic.main.activity_foto_temuan.view.iv_temuan1
-import kotlinx.android.synthetic.main.activity_handling_form.et_dosis_hand
-import kotlinx.android.synthetic.main.activity_handling_form.header_hand
-import kotlinx.android.synthetic.main.activity_handling_form.lyCameraPupuk
-import kotlinx.android.synthetic.main.activity_handling_form.sdHandSaveUpload
-import kotlinx.android.synthetic.main.activity_handling_form.sp_jenis_hand
-import kotlinx.android.synthetic.main.activity_handling_form.sp_metode_hand
-import kotlinx.android.synthetic.main.activity_handling_form.svMainPupuk
-import kotlinx.android.synthetic.main.activity_handling_form.temuanPupuk
-import kotlinx.android.synthetic.main.activity_handling_form.zoomPupuk
-import kotlinx.android.synthetic.main.header_form.tv_update_header_gudang
-import kotlinx.android.synthetic.main.header_form.tv_ver_app_header_gudang
-import kotlinx.android.synthetic.main.header_form.view.icLocationHeader
-import kotlinx.android.synthetic.main.header_form.view.ic_gudang_wh
-import kotlinx.android.synthetic.main.header_form.view.tv_gudang_main
-import kotlinx.android.synthetic.main.zoom_foto_layout.view.closeZoom
-import kotlinx.android.synthetic.main.zoom_foto_layout.view.deletePhoto
-import kotlinx.android.synthetic.main.zoom_foto_layout.view.fotoZoom
-import kotlinx.android.synthetic.main.zoom_foto_layout.view.retakePhoto
+import kotlinx.android.synthetic.main.activity_camera.view.*
+import kotlinx.android.synthetic.main.activity_foto_temuan.view.*
+import kotlinx.android.synthetic.main.activity_handling_form.*
+import kotlinx.android.synthetic.main.header_form.*
+import kotlinx.android.synthetic.main.header_form.view.*
+import kotlinx.android.synthetic.main.loading_file_layout.view.logoFileLoader
+import kotlinx.android.synthetic.main.loading_file_layout.view.lottieFileLoader
+import kotlinx.android.synthetic.main.loading_file_layout.view.tvHintFileLoader
+import kotlinx.android.synthetic.main.zoom_foto_layout.view.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
+import java.lang.Math.min
 import java.text.SimpleDateFormat
-import java.util.Calendar
-import java.util.Locale
+import java.util.*
 
 open class HandlingFormActivity : AppCompatActivity() {
 
-    private var getId = ""
+    private var getIdPk = ""
     private var getEst = ""
     private var getAfd = ""
     private var getBlok = ""
     private var getCons = ""
+    private var getStats = ""
+    private var getMode = ""
     private var getGPS = ""
     private var posPhoto = false
 
-    private var pupukArray = ArrayList<String>()
-    private var pupukIdArray = ArrayList<Int>()
+    private var perlakuanArray = ArrayList<String>()
+    private var perlakuanIdArray = ArrayList<Int>()
 
-    private var jenisPupukId = 0
-    private var metode = ""
-    private var dosisPupuk = ""
+    private var selectedPerlakuanArray = ArrayList<String>()
+    private var selectedPerlakuanIdArray = ArrayList<Int>()
+
     private var komen = ""
     private var komenResult = ""
 
@@ -142,17 +119,29 @@ open class HandlingFormActivity : AppCompatActivity() {
     private var isCameraOpen = false
     private var isFlashlightOn = false
 
+    private val coroutineScope = CoroutineScope(Dispatchers.Main)
+    private var inserting = false
+
     @SuppressLint("SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        UpdateMan().transparentStatusNavBar(window)
         setContentView(R.layout.activity_handling_form)
 
-        getId = getDataIntent("id")
+        getIdPk = getDataIntent("id")
         getEst = getDataIntent("est")
         getAfd = getDataIntent("afd")
         getBlok = getDataIntent("blok")
         getCons = getDataIntent("kondisi")
+        getStats = getDataIntent("status")
+        getMode = getDataIntent("mode")
         getGPS = getDataIntent("gps")
+
+        if (getMode == "4") {
+            svMainPupuk.visibility = View.GONE
+            temuanPupuk.visibility = View.VISIBLE
+            temuanPupuk.cvTemuan2.visibility = View.GONE
+        }
 
         rootDCIM = File(
             Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM),
@@ -160,13 +149,25 @@ open class HandlingFormActivity : AppCompatActivity() {
         ).toString()
         rootApp = getExternalFilesDir(Environment.DIRECTORY_PICTURES).toString()
 
+        Glide.with(this)//GLIDE LOGO FOR LOADING LAYOUT
+            .load(R.drawable.logo_png_white)
+            .into(loadingHand.logoFileLoader)
+        Glide.with(this)//GLIDE LOGO FOR LOADING LAYOUT
+            .load(R.drawable.ssms_green)
+            .into(loadingHand.logoFileLoader)
+        loadingHand.lottieFileLoader.setAnimation("loading_circle.json")//ANIMATION WITH LOTTIE FOR LOADING LAYOUT
+        @Suppress("DEPRECATION")
+        loadingHand.lottieFileLoader.loop(true)
+        loadingHand.lottieFileLoader.playAnimation()
+        loadingHand.tvHintFileLoader.text = "Mohon ditunggu, sedang memproses"
+
         getListPupuk()
         header_hand.icLocationHeader.visibility = View.GONE
-        header_hand.tv_gudang_main.text = "PENANGANAN"
+        header_hand.tv_gudang_main.text = "ACTION"
         header_hand.ic_gudang_wh.setImageResource(R.drawable.baseline_content_paste_24)
         setSpeedDial()
 
-        var urlCategory = PrefManager(this).dataReg!!
+        val urlCategory = PrefManager(this).dataReg!!
         JSONObject(
             FileMan().onlineInputStream(
                 urlCategory,
@@ -177,33 +178,10 @@ open class HandlingFormActivity : AppCompatActivity() {
         )
 
         hide(sp_jenis_hand)
-        hide(sp_metode_hand)
-
-        sp_jenis_hand.setItems(pupukArray)
-        sp_jenis_hand.text = "Pilih Jenis Pupuk"
-        sp_jenis_hand.setOnItemSelectedListener { view, position, id, item ->
-            jenisPupukId = pupukIdArray[position]
-        }
-
-        val metodeArray = arrayListOf("Tanam", "Sebar")
-        sp_metode_hand.setItems(metodeArray)
-        sp_metode_hand.text = "Pilih Metode"
-
-        sp_metode_hand.setOnItemSelectedListener { view, position, id, item ->
-            metode = item.toString()
-        }
-
-        et_dosis_hand.addTextChangedListener {
-            dosisPupuk = try {
-                et_dosis_hand.text.toString()
-            } catch (e: Exception) {
-                "0"
-            }
-        }
 
         temuanPupuk.iv_temuan1.setOnClickListener {
-            if (fotoArray.size >= 1) {
-                Toasty.warning(this, "Hanya boleh mengunggah maksimal 1 foto!").show()
+            if (fotoArray.size >= 4) {
+                Toasty.warning(this, "Hanya boleh mengunggah maksimal 4 foto!").show()
             } else {
                 if (photoTaken1) {
                     YoYo.with(Techniques.RotateInUpRight)
@@ -222,10 +200,10 @@ open class HandlingFormActivity : AppCompatActivity() {
                         .repeat(0)
                         .playOn(findViewById(R.id.zoomPupuk))
                 } else {
-                    if (temuanPupuk.et_komentar_temuan.text.toString().isNotEmpty()) {
+                    if (getMode == "4" || selectedPerlakuanArray.isNotEmpty()) {
                         initializeCameraCapture(imageCaptureCode1)
                     } else {
-                        Toasty.warning(this, "Tambahkan komentar terlebih dahulu!").show()
+                        Toasty.warning(this, "Tambahkan perlakuan terlebih dahulu!").show()
                     }
                 }
                 zoomPupuk.retakePhoto.setOnClickListener {
@@ -238,6 +216,71 @@ open class HandlingFormActivity : AppCompatActivity() {
         zoomPupuk.closeZoom.setOnClickListener {
             closeZoom()
         }
+
+        val searchEditText: EditText = findViewById(R.id.searchEditText)
+        val adapter: ArrayAdapter<String> =
+            ArrayAdapter(this, android.R.layout.simple_spinner_item, perlakuanArray)
+        sp_jenis_hand.setAdapter(adapter)
+
+        sp_jenis_hand.setOnItemSelectedListener { view, position, id, item ->
+            if (selectedPerlakuanArray.contains(item)) {
+                Toasty.error(this, "$item telah masuk ke dalam rekomendasi", Toasty.LENGTH_SHORT)
+                    .show()
+            } else {
+                for (i in perlakuanArray.indices) {
+                    if (item == perlakuanArray[i] && !selectedPerlakuanArray.contains(perlakuanArray[i])) {
+                        selectedPerlakuanArray.add(perlakuanArray[i])
+                        selectedPerlakuanIdArray.add(perlakuanIdArray[i])
+
+                        val chip = Chip(this)
+                        val paddingDp = TypedValue.applyDimension(
+                            TypedValue.COMPLEX_UNIT_DIP,
+                            10f,
+                            resources.displayMetrics
+                        ).toInt()
+                        chip.setPadding(paddingDp, paddingDp, paddingDp, paddingDp)
+                        chip.text = perlakuanArray[i]
+                        chip.setCloseIconResource(com.google.android.material.R.drawable.abc_ic_clear_material)
+                        chip.setCloseIconTintResource(R.color.colorRed_A400)
+                        chip.setChipIconResource(R.drawable.ic_baseline_add_circle_24)
+                        chip.setChipIconTintResource(R.color.ssmsPantone)
+                        chip.isCloseIconEnabled = true
+                        chip.setOnCloseIconClickListener {
+                            val chipText = chip.text.toString()
+                            for (z in selectedPerlakuanArray.indices) {
+                                if (chipText == selectedPerlakuanArray[z]) {
+                                    selectedPerlakuanArray.removeAt(z)
+                                    selectedPerlakuanIdArray.removeAt(z)
+                                    adapter.notifyDataSetChanged()
+                                    sp_jenis_hand.setAdapter(adapter)
+                                    break
+                                }
+                            }
+                            chip_hand.removeView(chip)
+                        }
+                        chip_hand.addView(chip)
+                        adapter.notifyDataSetChanged()
+                        sp_jenis_hand.setAdapter(adapter)
+                        break
+                    }
+                }
+            }
+        }
+
+        // Add a TextWatcher to filter the data based on the search input
+        searchEditText.addTextChangedListener(object : TextWatcher {
+            override fun afterTextChanged(s: Editable?) {}
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                adapter.filter.filter(s)
+                try {
+                    sp_jenis_hand.text = adapter.getItem(0)
+                } catch (e: Exception) {
+                    sp_jenis_hand.text = perlakuanArray[0]
+                }
+            }
+        })
     }
 
     private fun closeZoom() {
@@ -289,9 +332,7 @@ open class HandlingFormActivity : AppCompatActivity() {
                 R.id.saveHandling -> {
                     try {
                         if (posPhoto) {
-                            if (fname1.isNotEmpty() && temuanPupuk.et_komentar_temuan.text.toString()
-                                    .isNotEmpty()
-                            ) {
+                            if (fname1.isNotEmpty()) {
                                 takeFindingPhoto()
 
                                 posPhoto = !posPhoto
@@ -303,120 +344,80 @@ open class HandlingFormActivity : AppCompatActivity() {
 
                                 Toasty.success(this, "Sukses menyimpan foto!").show()
                             } else {
-                                if (fotoArray.size < 1) {
-                                    Toasty.warning(this, "Tambahkan foto temuan dan komentar!")
+                                if (fotoArray.size < 4) {
+                                    Toasty.warning(this, "Tambahkan foto temuan!")
                                         .show()
                                 } else {
-                                    Toasty.warning(this, "Hanya boleh mengunggah maksimal 1 foto!").show()
+                                    Toasty.warning(this, "Hanya boleh mengunggah maksimal 4 foto!")
+                                        .show()
                                 }
                             }
                         } else {
-                            if (sp_jenis_hand.text == "Pilih Jenis Pupuk" || et_dosis_hand.text.toString()
-                                    .isEmpty() || sp_metode_hand.text == "Pilih Metode" || fotoArray.isEmpty()
-                            ) {
-                                AlertDialogUtility.alertDialog(
-                                    this,
-                                    "Ada field atau foto yang belum diisi!",
-                                    "warning.json"
-                                )
-                            } else {
-                                AlertDialogUtility.withTwoActions(
-                                    this@HandlingFormActivity,
-                                    "BATAL",
-                                    "SIMPAN",
-                                    "Yakin menyimpan data?",
-                                    "warning.json"
+                            if (getMode != "4") {
+                                if (sp_jenis_hand.text == "Pilih Jenis Pupuk" || fotoArray.isEmpty()
                                 ) {
-                                    if (fotoArray.isNotEmpty()) {
-                                        fname = fotoArray.toTypedArray().contentToString()
-                                        komen = komArray.toTypedArray().contentToString()
-                                    }
-
-                                    var revKomen =
-                                        komen.replace("[", "").replace("]", "").split(",")
-                                            .toTypedArray()
-                                    for (i in revKomen.indices) {
-                                        val prefix = if (i == 0) "" else "$"
-                                        komenResult += "${prefix}${
-                                            revKomen[i].trim().replace("|", ",")
-                                        }"
-                                    }
-
-                                    val databaseHandler = PemupukanSQL(this)
-                                    val status = databaseHandler.addPokokKuning(
-                                        idPk = getId.toInt(),
-                                        estate = getEst,
-                                        afdeling = getAfd,
-                                        blok = getBlok,
-                                        kondisi = getCons,
-                                        datetime = SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(
-                                            Calendar.getInstance().time
-                                        ),
-                                        jenisPupukId = jenisPupukId,
-                                        dosisPupuk = dosisPupuk,
-                                        metodePupuk = metode,
-                                        foto = fname.replace("[", "").replace("]", "")
-                                            .replace(",", "$").replace(" ", ""),
-                                        komen = komenResult,
-                                        app_ver = "${BuildConfig.VERSION_NAME};${android.os.Build.VERSION.RELEASE};${android.os.Build.MODEL};$getGPS"
+                                    AlertDialogUtility.alertDialog(
+                                        this,
+                                        "Ada field atau foto yang belum diisi!",
+                                        "warning.json"
                                     )
-                                    if (status > -1) {
-                                        val pkPath =
-                                            this.getExternalFilesDir(null)?.absolutePath + "/MAIN/pk" + PrefManager(
-                                                this
-                                            ).dataReg!!
-                                        val fileMaps = File(pkPath)
-                                        if (fileMaps.exists()) {
-                                            try {
-                                                val readMaps = fileMaps.readText()
-                                                val objMaps = JSONObject(readMaps)
+                                } else {
+                                    AlertDialogUtility.withTwoActions(
+                                        this@HandlingFormActivity,
+                                        "BATAL",
+                                        "SIMPAN",
+                                        "Yakin menyimpan data?",
+                                        "warning.json"
+                                    ) {
+                                        inserting = true
+                                        clLayoutHand.visibility = View.VISIBLE
 
-                                                val estObjMaps = objMaps.getJSONObject(getEst)
-                                                val afdObjMaps =
-                                                    estObjMaps.getJSONObject(getAfd)
-                                                val blokObjMaps =
-                                                    afdObjMaps.getJSONObject(getBlok)
-                                                for (index in blokObjMaps.keys()) {
-                                                    val item =
-                                                        blokObjMaps.getJSONObject(index)
-                                                    if (getId == index) {
-                                                        item.put("status", "Sudah")
-                                                        fileMaps.writeText(objMaps.toString())
-                                                    }
-                                                }
-
-                                                AlertDialogUtility.withSingleAction(
-                                                    this,
-                                                    "OK",
-                                                    "Pemupukan Pokok Kuning telah tersimpan!",
-                                                    "success.json"
-                                                ) {
-                                                    val intent =
-                                                        Intent(this, MainActivity::class.java)
-                                                    startActivity(intent)
-                                                    finishAffinity()
-                                                }
-                                            } catch (e: Exception) {
-                                                AlertDialogUtility.alertDialog(
-                                                    this,
-                                                    "Terjadi kesalahan, hubungi pengembang. Error: $e",
-                                                    "warning.json"
-                                                )
-                                                e.printStackTrace()
+                                        coroutineScope.launch {
+                                            withContext(Dispatchers.IO) {
+                                                insertData()
                                             }
-                                        } else {
-                                            AlertDialogUtility.alertDialog(
-                                                this,
-                                                "File JSON tidak ditemukan!",
-                                                "warning.json"
-                                            )
+
+                                            withContext(Dispatchers.Main) {
+                                                clLayoutHand.visibility = View.GONE
+                                                inserting = false
+                                            }
                                         }
-                                    } else {
-                                        AlertDialogUtility.alertDialog(
-                                            this,
-                                            "Terjadi kesalahan, hubungi pengembang",
-                                            "warning.json"
+                                    }
+                                }
+                            } else {
+                                if (fname1.isEmpty()) {
+                                    AlertDialogUtility.alertDialog(
+                                        this,
+                                        "Ada foto yang belum diisi!",
+                                        "warning.json"
+                                    )
+                                } else {
+                                    AlertDialogUtility.withTwoActions(
+                                        this@HandlingFormActivity,
+                                        "BATAL",
+                                        "SIMPAN",
+                                        "Yakin menyimpan data?",
+                                        "warning.json"
+                                    ) {
+                                        komArray.add(
+                                            temuanPupuk.et_komentar_temuan.text.toString()
+                                                .replace(",", "|")
                                         )
+                                        fotoArray.add(fname1)
+
+                                        inserting = true
+                                        clLayoutHand.visibility = View.VISIBLE
+
+                                        coroutineScope.launch {
+                                            withContext(Dispatchers.IO) {
+                                                insertData()
+                                            }
+
+                                            withContext(Dispatchers.Main) {
+                                                clLayoutHand.visibility = View.GONE
+                                                inserting = false
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -437,18 +438,193 @@ open class HandlingFormActivity : AppCompatActivity() {
         })
     }
 
+    private fun insertData() {
+        val pm = PrefManagerEstate(this)
+        val pmPrevCons = try {
+            pm.prevCons!!
+        } catch (e: Exception) {
+            ""
+        }
+        val arrPrevCons = ArrayList<String>()
+        if (pmPrevCons.isNotEmpty()) {
+            val splitPrevCons = pm.prevCons!!.replace("[", "").replace("]", "").replace(" ", "").split(",")
+            for (a in splitPrevCons.indices) {
+                arrPrevCons.add(splitPrevCons[a])
+            }
+        }
+
+        if (fotoArray.isNotEmpty()) {
+            fname = fotoArray.toTypedArray().contentToString()
+            komen = komArray.toTypedArray().contentToString()
+        }
+
+        val revKomen =
+            komen.replace("[", "").replace("]", "").split(",")
+                .toTypedArray()
+        for (i in revKomen.indices) {
+            val prefix = if (i == 0) "" else "$"
+            komenResult += "${prefix}${
+                revKomen[i].trim().replace("|", ",")
+            }"
+        }
+
+        val databaseHandler = PemupukanSQL(this)
+        val splitIdPk = getIdPk.split("$")
+        val splitAfdPk = getAfd.split("$")
+        val splitBlokPk = getBlok.split("$")
+        val splitConsPk = getCons.split("$")
+        val splitStatsPk = getStats.split("$")
+        for (a in splitIdPk.indices) {
+            if (splitIdPk[a].isNotEmpty()) {
+                val dateNow = SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(
+                    Calendar.getInstance().time
+                )
+                val resultPerlakuan = selectedPerlakuanIdArray.toTypedArray()
+                    .contentToString().replace("[", "")
+                    .replace("]", "").replace(" ", "")
+                    .replace(",", "$")
+
+                val status = databaseHandler.addPokokKuning(
+                    idPk = splitIdPk[a].toInt(),
+                    estate = getEst,
+                    afdeling = splitAfdPk[a],
+                    blok = splitBlokPk[a],
+                    status = if (getMode == "4") splitStatsPk[a] else "Sudah",
+                    kondisi = if (getMode == "4") "Sembuh" else splitConsPk[a],
+                    datetime = dateNow,
+                    jenisPupukId = resultPerlakuan,
+                    foto = fname.replace("[", "").replace("]", "")
+                        .replace(",", "$").replace(" ", ""),
+                    komen = komenResult,
+                    app_ver = "${BuildConfig.VERSION_NAME};${Build.VERSION.RELEASE};${Build.MODEL};$getGPS"
+                )
+
+                if (status > -1) {
+                    val pkPath =
+                        this.getExternalFilesDir(null)?.absolutePath + "/MAIN/pk" + PrefManager(
+                            this
+                        ).dataReg!!
+                    val fileMaps = File(pkPath)
+                    if (fileMaps.exists()) {
+                        try {
+                            val readMaps = fileMaps.readText()
+                            val objMaps = JSONObject(readMaps)
+
+                            val estObjMaps =
+                                objMaps.getJSONObject(getEst)
+                            val afdObjMaps =
+                                estObjMaps.getJSONObject(splitAfdPk[a])
+                            val blokObjMaps =
+                                afdObjMaps.getJSONObject(splitBlokPk[a])
+                            for (index in blokObjMaps.keys()) {
+                                val item =
+                                    blokObjMaps.getJSONObject(index)
+                                if (splitIdPk[a] == index) {
+                                    if (getMode == "4") {
+                                        arrPrevCons.removeIf { it.contains(splitIdPk[a]) }
+                                        val tglAct = if (item.has("tanggal")) {
+                                            "$${item.getString("tanggal").replace(" ", "|")}"
+                                        } else {
+                                            "$"
+                                        }
+                                        arrPrevCons.add("${splitIdPk[a]}$${item.getString("kondisi")}$${item.getString("status")}$tglAct")
+
+                                        item.put("kondisi", "Sembuh")
+                                    } else {
+                                        item.put("status", "Sudah")
+                                        item.put("perlakuan", resultPerlakuan)
+                                    }
+                                    item.put("tanggal", dateNow)
+                                }
+                            }
+                            fileMaps.writeText(objMaps.toString())
+
+                            if (a == splitIdPk.size - 1) {
+                                inserting = false
+                                runOnUiThread {
+                                    AlertDialogUtility.withSingleAction(
+                                        this,
+                                        "OK",
+                                        "Data pokok kuning berhasil disimpan!",
+                                        "success.json"
+                                    ) {
+                                        if (arrPrevCons.isNotEmpty()) {
+                                            pm.prevCons =
+                                                arrPrevCons.toTypedArray().contentToString()
+                                        }
+
+                                        Toasty.info(
+                                            this,
+                                            "Mohon tunggu, sedang memproses peta kembali..",
+                                            Toasty.LENGTH_LONG
+                                        ).show()
+
+                                        val intent =
+                                            Intent(this, MapsActivity::class.java).putExtra(
+                                                "est",
+                                                pm.estate
+                                            )
+                                                .putExtra("afd", pm.afdeling)
+                                                .putExtra("blok", pm.blok)
+                                                .putExtra("blokPlot", pm.blokPlot)
+                                                .putExtra("idPk", getIdPk)
+                                        startActivity(intent)
+                                        finishAffinity()
+                                    }
+                                }
+                            }
+                        } catch (e: Exception) {
+                            inserting = false
+                            runOnUiThread {
+                                AlertDialogUtility.alertDialog(
+                                    this,
+                                    "Terjadi kesalahan, hubungi pengembang. Error: $e",
+                                    "warning.json"
+                                )
+                            }
+                            e.printStackTrace()
+                            break
+                        }
+                    } else {
+                        inserting = false
+                        runOnUiThread {
+                            AlertDialogUtility.alertDialog(
+                                this,
+                                "File JSON tidak ditemukan!",
+                                "warning.json"
+                            )
+                        }
+                        break
+                    }
+                } else {
+                    inserting = false
+                    runOnUiThread {
+                        AlertDialogUtility.alertDialog(
+                            this,
+                            "Terjadi kesalahan, hubungi pengembang",
+                            "warning.json"
+                        )
+                    }
+                    break
+                }
+            }
+        }
+    }
+
     private fun updateSpeedDialItems(sdSaveUpload: SpeedDialView) {
         sdSaveUpload.clearActionItems() // Remove all existing action items
 
-        createSD(
-            if (!posPhoto) "TAMBAH FOTO" else "KEMBALI",
-            R.id.openCamera,
-            if (!posPhoto) R.drawable.ic_baseline_add_a_photo_24 else R.drawable.baseline_arrow_back_24,
-            if (!posPhoto) R.color.chart_blue4 else R.color.colorRed_A400
-        )
+        if (getMode != "4") {
+            createSD(
+                if (!posPhoto) "TAMBAH FOTO" else "KEMBALI",
+                R.id.openCamera,
+                if (!posPhoto) R.drawable.ic_baseline_add_a_photo_24 else R.drawable.baseline_arrow_back_24,
+                if (!posPhoto) R.color.chart_blue4 else R.color.colorRed_A400
+            )
+        }
 
         createSD(
-            "SIMPAN" + if (!posPhoto) " DATA" else " FOTO",
+            "SIMPAN" + if (!posPhoto || getMode == "4") " DATA" else " FOTO",
             R.id.saveHandling,
             R.drawable.ic_save_black_24dp,
             R.color.green_basiccolor
@@ -523,7 +699,7 @@ open class HandlingFormActivity : AppCompatActivity() {
 
     private fun addToGallery(photoFile: File) {
         val galleryIntent = Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE)
-        val f = photoFile!!
+        val f = photoFile
         val picUri = Uri.fromFile(f)
         galleryIntent.data = picUri
         this.sendBroadcast(galleryIntent)
@@ -659,9 +835,12 @@ open class HandlingFormActivity : AppCompatActivity() {
                         }
                     }
 
+                    val splitAfdPk = getAfd.split("$")
+                    val splitBlokPk = getBlok.split("$")
                     dateFormat =
                         SimpleDateFormat("yyyyMdd_HHmmss").format(Calendar.getInstance().time) //nentuin tanggal dan jam
-                    var pictureFile = "PK_${dateFormat}_${getEst}_${getAfd}_${getBlok}"
+                    var pictureFile =
+                        "PK_${dateFormat}_${getEst}_${splitAfdPk[splitAfdPk.lastIndex]}_${splitBlokPk[splitBlokPk.lastIndex]}"
 
                     selectedSize?.let { size ->
                         val surfaceTexture = textureViewCam.surfaceTexture
@@ -704,7 +883,7 @@ open class HandlingFormActivity : AppCompatActivity() {
                         imageReader =
                             ImageReader.newInstance(size.width, size.height, ImageFormat.JPEG, 1)
                         imageReader!!.setOnImageAvailableListener({ p0 ->
-                            var image = p0?.acquireLatestImage()
+                            val image = p0?.acquireLatestImage()
                             var fileDCIM: File? = null
                             if (image != null) {
                                 var buffer = image.planes[0].buffer
@@ -752,35 +931,90 @@ open class HandlingFormActivity : AppCompatActivity() {
                                 Locale("id", "ID")
                             ).format(Calendar.getInstance().time) //nentuin tanggal dan jam
 
-                            var komentarEmp = temuanPupuk.et_komentar_temuan.text.toString()
+                            val wmDt = if (getMode != "4") {
+                                val content =
+                                    selectedPerlakuanArray.toTypedArray().contentToString()
+                                        .replace("[", "").replace("]", "")
+                                if (content.length <= 50) content else "${
+                                    content.substring(
+                                        0,
+                                        50
+                                    )
+                                }.."
+                            } else {
+                                val content = temuanPupuk.et_komentar_temuan.text.toString()
+                                if (content.isNotEmpty()) {
+                                    if (content.length <= 50) content else "${
+                                        content.substring(
+                                            0,
+                                            50
+                                        )
+                                    }.."
+                                } else {
+                                    content
+                                }
+                            }
+                            val wmText = if (wmDt.isNotEmpty()) {
+                                "${wmDt}\n$dateWM"
+                            } else {
+                                dateWM
+                            }
                             val watermarkedBitmap = addWatermark(
                                 bitmap,
-                                "POKOK KUNING/$getEst/$getAfd/$getBlok\n${
-                                    komentarEmp.replace("\n", " ")
-                                }\n$dateWM"
+                                "POKOK KUNING/$getEst/${splitAfdPk[splitAfdPk.lastIndex]}/${splitBlokPk[splitBlokPk.lastIndex]}\n" + wmText
                             )
 
                             try {
                                 val targetSizeBytes = 250 * 1024
-                                var quality = 90
+                                var quality = 100
+                                val minQuality = 50
+                                val maxWidth = 1500
 
-                                val outputStream = ByteArrayOutputStream()
-                                watermarkedBitmap.compress(Bitmap.CompressFormat.JPEG, quality, outputStream)
-                                while (outputStream.size() > targetSizeBytes && quality > 0) {
-                                    quality -= 5
-                                    outputStream.reset()
-                                    watermarkedBitmap.compress(Bitmap.CompressFormat.JPEG, quality, outputStream)
+                                val sourceWidth = watermarkedBitmap.width
+                                val sourceHeight = watermarkedBitmap.height
+
+                                val maxHeight =
+                                    (maxWidth.toFloat() / sourceWidth.toFloat() * sourceHeight).toInt()
+
+                                var scaledBitmap: Bitmap? = null
+
+                                while (true) {
+                                    if (quality <= minQuality || sourceWidth <= maxWidth || sourceHeight <= maxHeight) {
+                                        break
+                                    }
+
+                                    val aspectRatio = sourceWidth.toFloat() / sourceHeight.toFloat()
+                                    val newWidth = min(maxWidth, (maxHeight * aspectRatio).toInt())
+                                    scaledBitmap = Bitmap.createScaledBitmap(
+                                        watermarkedBitmap,
+                                        newWidth,
+                                        maxHeight,
+                                        true
+                                    )
+
+                                    val outputStream = ByteArrayOutputStream()
+                                    scaledBitmap.compress(
+                                        Bitmap.CompressFormat.JPEG,
+                                        quality,
+                                        outputStream
+                                    )
+
+                                    if (outputStream.size() > targetSizeBytes) {
+                                        quality -= 5
+                                    } else {
+                                        break
+                                    }
                                 }
 
                                 try {
                                     val out = FileOutputStream(file)
-                                    out.write(outputStream.toByteArray())
+                                    scaledBitmap?.compress(Bitmap.CompressFormat.JPEG, quality, out)
                                     out.flush()
                                     out.close()
-                                } catch (e: java.lang.Exception) {
+                                } catch (e: Exception) {
                                     e.printStackTrace()
                                 }
-                            } catch (e: java.lang.Exception) {
+                            } catch (e: Exception) {
                                 e.printStackTrace()
                             }
 
@@ -885,19 +1119,19 @@ open class HandlingFormActivity : AppCompatActivity() {
         val selectQuery =
             "SELECT  * FROM ${PemupukanSQL.db_tabPupuk} ORDER BY ${PemupukanSQL.db_namaPupuk} ASC"
         val db = PemupukanSQL(this).readableDatabase
-        var i: Cursor?
+        val i: Cursor?
         try {
             i = db.rawQuery(selectQuery, null)
             if (i.moveToFirst()) {
                 do {
-                    pupukArray.add(
+                    perlakuanArray.add(
                         try {
                             i.getString(i.getColumnIndex(PemupukanSQL.db_namaPupuk))
                         } catch (e: Exception) {
                             ""
                         }
                     )
-                    pupukIdArray.add(
+                    perlakuanIdArray.add(
                         try {
                             i.getInt(i.getColumnIndex(PemupukanSQL.db_id))
                         } catch (e: Exception) {
@@ -937,6 +1171,13 @@ open class HandlingFormActivity : AppCompatActivity() {
     override fun onBackPressed() {
         if (isCameraOpen) {
             closeCamera()
+        } else if (posPhoto) {
+            posPhoto = !posPhoto
+
+            svMainPupuk.visibility = if (!posPhoto) View.VISIBLE else View.GONE
+            temuanPupuk.visibility = if (!posPhoto) View.GONE else View.VISIBLE
+
+            updateSpeedDialItems(sdHandSaveUpload)
         } else {
             AlertDialogUtility.withTwoActions(
                 this,
@@ -948,7 +1189,7 @@ open class HandlingFormActivity : AppCompatActivity() {
                 val pm = PrefManagerEstate(this)
                 val intent = Intent(this, MapsActivity::class.java).putExtra("est", pm.estate)
                     .putExtra("afd", pm.afdeling).putExtra("blok", pm.blok)
-                    .putExtra("blokPlot", pm.blokPlot)
+                    .putExtra("blokPlot", pm.blokPlot).putExtra("idPk", getIdPk)
                 startActivity(intent)
                 finishAffinity()
             }

@@ -17,7 +17,8 @@
     <androidx.cardview.widget.CardView
         android:layout_width="match_parent"
         android:layout_height="60dp"
-        android:layout_margin="20dp"
+        android:layout_marginTop="40dp"
+        android:layout_marginHorizontal="20dp"
         android:backgroundTint="@color/white"
         app:cardCornerRadius="50dp"
         app:cardElevation="20dp"
@@ -71,14 +72,14 @@
                         android:fontFamily="@font/segoeuil"
                         android:text="Foto :"
                         android:textColor="@color/black"
-                        android:textStyle="italic"
-                        android:textSize="12dp" />
+                        android:textSize="12dp"
+                        android:textStyle="italic" />
 
                     <TextView
-                        android:layout_marginTop="-3dp"
                         android:id="@+id/tvTglFotoMaps"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:layout_marginTop="-3dp"
                         android:fontFamily="@font/seguisb"
                         android:text="-"
                         android:textColor="@color/black"
@@ -129,14 +130,14 @@
                         android:fontFamily="@font/segoeuil"
                         android:text="Blok :"
                         android:textColor="@color/black"
-                        android:textStyle="italic"
-                        android:textSize="12dp" />
+                        android:textSize="12dp"
+                        android:textStyle="italic" />
 
                     <TextView
-                        android:layout_marginTop="-3dp"
                         android:id="@+id/tvBlokMaps"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:layout_marginTop="-3dp"
                         android:fontFamily="@font/seguisb"
                         android:text="-"
                         android:textColor="@color/black"
@@ -187,14 +188,14 @@
                         android:fontFamily="@font/segoeuil"
                         android:text="Total :"
                         android:textColor="@color/black"
-                        android:textStyle="italic"
-                        android:textSize="12dp" />
+                        android:textSize="12dp"
+                        android:textStyle="italic" />
 
                     <TextView
-                        android:layout_marginTop="-3dp"
                         android:id="@+id/tvJmlPkMaps"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:layout_marginTop="-3dp"
                         android:fontFamily="@font/seguisb"
                         android:text="-"
                         android:textColor="@color/black"
@@ -209,22 +210,22 @@
     </androidx.cardview.widget.CardView>
 
     <LinearLayout
-        android:id="@+id/llButtonFu"
-        android:layout_marginLeft="20dp"
-        android:layout_marginRight="20dp"
+        android:id="@+id/llAccuracy"
         android:layout_width="match_parent"
-        android:layout_height="70dp"
+        android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
+        android:layout_marginHorizontal="20dp"
+        android:layout_marginBottom="5dp"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintBottom_toTopOf="@id/cvCardBottom"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent">
+        app:layout_constraintEnd_toEndOf="parent">
 
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:orientation="vertical"
             android:layout_weight="1"
-            android:gravity="bottom">
+            android:gravity="bottom"
+            android:orientation="vertical">
 
             <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
@@ -239,28 +240,28 @@
                     android:layout_width="wrap_content"
                     android:layout_height="match_parent"
                     android:layout_marginStart="10dp"
-                    android:orientation="horizontal"
                     android:layout_weight="1"
-                    android:gravity="center">
+                    android:gravity="center"
+                    android:orientation="horizontal">
 
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:fontFamily="@font/segoeuil"
-                        android:text="Akurasi : "
+                        android:text="Pokok : "
                         android:textColor="@color/black"
-                        android:textStyle="italic"
-                        android:textSize="12dp" />
+                        android:textSize="12dp"
+                        android:textStyle="italic" />
 
                     <TextView
-                        android:id="@+id/tvAccuracyMaps"
+                        android:id="@+id/tvPokokMaps"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:fontFamily="@font/seguisb"
                         android:text="-"
-                        android:textStyle="bold"
-                        android:textColor="@color/colorRed_A400"
-                        android:textSize="13dp" />
+                        android:textColor="@color/black"
+                        android:textSize="13dp"
+                        android:textStyle="bold" />
 
                 </LinearLayout>
 
@@ -271,10 +272,60 @@
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:layout_marginStart="15dp"
-            android:orientation="vertical"
+            android:layout_marginStart="10dp"
             android:layout_weight="1"
-            android:gravity="bottom">
+            android:gravity="bottom"
+            android:orientation="vertical">
+
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="2dp"
+                android:layout_marginBottom="7dp"
+                android:backgroundTint="@color/white"
+                app:cardCornerRadius="20dp"
+                app:cardElevation="2dp">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:layout_marginStart="10dp"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/segoeuil"
+                        android:text="Akurasi : "
+                        android:textColor="@color/black"
+                        android:textSize="12dp"
+                        android:textStyle="italic" />
+
+                    <TextView
+                        android:id="@+id/tvAccuracyMaps"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/seguisb"
+                        android:text="-"
+                        android:textColor="@color/colorRed_A400"
+                        android:textSize="13dp"
+                        android:textStyle="bold" />
+
+                </LinearLayout>
+
+            </androidx.cardview.widget.CardView>
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_marginStart="10dp"
+            android:layout_weight="1"
+            android:gravity="bottom"
+            android:orientation="vertical">
 
             <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
@@ -288,9 +339,9 @@
                     android:layout_width="wrap_content"
                     android:layout_height="match_parent"
                     android:layout_marginStart="10dp"
-                    android:orientation="horizontal"
                     android:layout_weight="1"
-                    android:gravity="center">
+                    android:gravity="center"
+                    android:orientation="horizontal">
 
                     <TextView
                         android:layout_width="match_parent"
@@ -298,8 +349,8 @@
                         android:fontFamily="@font/segoeuil"
                         android:text="Jarak : "
                         android:textColor="@color/black"
-                        android:textStyle="italic"
-                        android:textSize="12dp" />
+                        android:textSize="12dp"
+                        android:textStyle="italic" />
 
                     <TextView
                         android:id="@+id/tvJarakMaps"
@@ -307,43 +358,9 @@
                         android:layout_height="wrap_content"
                         android:fontFamily="@font/seguisb"
                         android:text="-"
-                        android:textStyle="bold"
                         android:textColor="@color/colorRed_A400"
-                        android:textSize="13dp" />
-
-                </LinearLayout>
-
-            </androidx.cardview.widget.CardView>
-
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:orientation="vertical"
-            android:layout_weight="1"
-            android:gravity="right">
-
-            <androidx.cardview.widget.CardView
-                android:id="@+id/cvFUMaps"
-                android:layout_marginBottom="5dp"
-                android:visibility="gone"
-                android:layout_width="60dp"
-                android:layout_height="60dp"
-                android:backgroundTint="@color/chart_blue4"
-                app:cardCornerRadius="50dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:gravity="center"
-                    android:orientation="vertical">
-
-                    <ImageView
-                        android:layout_width="30dp"
-                        android:layout_height="30dp"
-                        android:src="@drawable/baseline_content_paste_24"
-                        app:tint="@color/white" />
+                        android:textSize="13dp"
+                        android:textStyle="bold" />
 
                 </LinearLayout>
 
@@ -352,6 +369,109 @@
         </LinearLayout>
 
     </LinearLayout>
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fbSingle"
+        android:visibility="gone"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
+        android:clickable="true"
+        android:focusable="true"
+        app:tint="@color/white"
+        app:layout_constraintBottom_toTopOf="@+id/fbMultiple"
+        app:layout_constraintStart_toStartOf="@+id/fbMultiple"
+        app:srcCompat="@drawable/circle" />
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fbMultiple"
+        android:visibility="gone"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
+        android:clickable="true"
+        android:focusable="true"
+        app:tint="@color/white"
+        app:layout_constraintBottom_toTopOf="@+id/fbBlok"
+        app:layout_constraintStart_toStartOf="@+id/fbBlok"
+        app:srcCompat="@drawable/baseline_spoke_24" />
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fbBlok"
+        android:visibility="gone"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
+        android:clickable="true"
+        android:focusable="true"
+        app:tint="@color/white"
+        app:layout_constraintBottom_toTopOf="@+id/fbPokokSembuh"
+        app:layout_constraintStart_toStartOf="@+id/fbPokokSembuh"
+        app:srcCompat="@drawable/ic_baseline_grain_24" />
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fbPokokSembuh"
+        android:visibility="gone"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
+        android:clickable="true"
+        android:focusable="true"
+        app:tint="@color/white"
+        app:layout_constraintBottom_toTopOf="@+id/fbMenu2Maps"
+        app:layout_constraintStart_toStartOf="@+id/fbMenu2Maps"
+        app:srcCompat="@drawable/ic_palm_tree_24" />
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fbMenu2Maps"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="20dp"
+        android:clickable="true"
+        android:focusable="true"
+        app:tint="@color/white"
+        app:layout_constraintBottom_toTopOf="@id/llAccuracy"
+        app:layout_constraintStart_toStartOf="parent"
+        app:srcCompat="@drawable/ic_apps_black_24dp" />
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fbActionMaps"
+        android:visibility="gone"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
+        android:clickable="true"
+        android:focusable="true"
+        app:tint="@color/white"
+        app:layout_constraintBottom_toTopOf="@+id/fbCenterMaps"
+        app:layout_constraintEnd_toEndOf="@+id/fbCenterMaps"
+        app:srcCompat="@drawable/baseline_content_paste_24" />
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fbCenterMaps"
+        android:visibility="gone"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
+        android:clickable="true"
+        android:focusable="true"
+        app:tint="@color/white"
+        app:layout_constraintBottom_toTopOf="@+id/fbMenu1Maps"
+        app:layout_constraintEnd_toEndOf="@+id/fbMenu1Maps"
+        app:srcCompat="@drawable/baseline_navigation_24" />
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fbMenu1Maps"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="20dp"
+        android:clickable="true"
+        android:focusable="true"
+        app:tint="@color/white"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/llAccuracy"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:srcCompat="@drawable/baseline_add_24" />
 
     <androidx.cardview.widget.CardView
         android:id="@+id/cvCardBottom"
@@ -411,14 +531,14 @@
                         android:fontFamily="@font/segoeuil"
                         android:text="Kondisi :"
                         android:textColor="@color/black"
-                        android:textStyle="italic"
-                        android:textSize="12dp" />
+                        android:textSize="12dp"
+                        android:textStyle="italic" />
 
                     <TextView
-                        android:layout_marginTop="-3dp"
                         android:id="@+id/tvKondisiMaps"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:layout_marginTop="-3dp"
                         android:fontFamily="@font/seguisb"
                         android:text="-"
                         android:textColor="@color/black"
@@ -469,14 +589,14 @@
                         android:fontFamily="@font/segoeuil"
                         android:text="Status :"
                         android:textColor="@color/black"
-                        android:textStyle="italic"
-                        android:textSize="12dp" />
+                        android:textSize="12dp"
+                        android:textStyle="italic" />
 
                     <TextView
-                        android:layout_marginTop="-3dp"
                         android:id="@+id/tvStatusMaps"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:layout_marginTop="-3dp"
                         android:fontFamily="@font/seguisb"
                         android:text="-"
                         android:textColor="@color/black"
@@ -489,5 +609,21 @@
         </LinearLayout>
 
     </androidx.cardview.widget.CardView>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/clLayoutVerif"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:elevation="20dp"
+        android:visibility="gone">
+
+        <include
+            android:id="@+id/loadingVerif"
+            layout="@layout/loading_file_layout"
+            android:elevation="20dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

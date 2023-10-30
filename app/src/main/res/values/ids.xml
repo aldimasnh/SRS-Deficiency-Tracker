@@ -3,4 +3,10 @@
     <item name="openCamera" type="id" />
     <item name="saveHandling" type="id" />
     <item name="upload_data" type="id" />
+    <item name="actSingle" type="id" />
+    <item name="actMultiple" type="id" />
+    <item name="actBlok" type="id" />
+    <item name="pokokSembuh" type="id" />
+    <item name="formAction" type="id" />
+    <item name="centerMaps" type="id" />
 </resources>
