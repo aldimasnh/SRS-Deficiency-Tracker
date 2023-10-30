@@ -40,13 +40,14 @@ import kotlinx.android.synthetic.main.icon_grid.view.leftIconTap
 import kotlinx.android.synthetic.main.icon_grid.view.rightIconDescription
 import kotlinx.android.synthetic.main.icon_grid.view.rightIconSrc
 import kotlinx.android.synthetic.main.icon_grid.view.rightIconTap
+import kotlinx.android.synthetic.main.loading_file_layout.view.tvHintFileLoader
 import java.io.File
 
 class MainActivity : AppCompatActivity() {
     @SuppressLint("SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        UpdateMan().hideStatusNavigationBar(window)
+        UpdateMan().transparentStatusNavBar(window)
         setContentView(R.layout.activity_main)
 
         tv_ver_header.text = "App ver: ${BuildConfig.VERSION_NAME}"
@@ -65,6 +66,7 @@ class MainActivity : AppCompatActivity() {
         treeAndBlok.leftIconDescription.text = "SINKRONISASI POKOK KUNING"
         treeAndBlok.rightIconDescription.text = "SINKRONISASI DATA BLOK"
         dashboardAndIdk.leftIconDescription.text = "DASHBOARD"
+        loadingMain.tvHintFileLoader.text = "Pastikan jaringan anda stabil dan perangkat sudah terkoneksi internet"
 
         dashboardAndIdk.cv_grid2.visibility = View.GONE
 

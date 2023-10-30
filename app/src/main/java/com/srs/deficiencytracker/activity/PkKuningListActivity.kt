@@ -49,12 +49,11 @@ import com.srs.deficiencytracker.database.PemupukanSQL.Companion.db_kondisi
 import com.srs.deficiencytracker.database.PemupukanSQL.Companion.db_photo
 import com.srs.deficiencytracker.database.PemupukanSQL.Companion.db_status
 import com.srs.deficiencytracker.database.PemupukanSQL.Companion.db_tabPkKuning
-import com.srs.deficiencytracker.database.PupukList
 import com.srs.deficiencytracker.database.ViewPkKuning
 import com.srs.deficiencytracker.utilities.AlertDialogUtility
-import com.srs.deficiencytracker.utilities.Database
 import com.srs.deficiencytracker.utilities.FileMan
 import com.srs.deficiencytracker.utilities.PrefManager
+import com.srs.deficiencytracker.utilities.PrefManagerEstate
 import com.srs.deficiencytracker.utilities.UpdateMan
 import es.dmoral.toasty.Toasty
 import kotlinx.android.synthetic.main.activity_list_upload.clLayoutUpload
@@ -91,7 +90,7 @@ class PkKuningListActivity : AppCompatActivity() {
 
     //upload
     private val urlCekFoto = "https://srs-ssms.com/deficiency_tracker/checkFotoTracker.php"
-    private val urlInsert = "https://srs-ssms.com/deficiency_tracker/postDataTracker2.php"
+    private val urlInsert = "https://srs-ssms.com/deficiency_tracker/postDataTracker3.php"
     var serverURL: String = "https://srs-ssms.com/deficiency_tracker/recordFotoTracker.php"
     private val client = OkHttpClient()
 
@@ -149,6 +148,7 @@ class PkKuningListActivity : AppCompatActivity() {
                     if (messageInsert.isNotEmpty()) {
                         handler.postDelayed({
                             if (successResponseInsert == 1) {
+                                PrefManagerEstate(this@PkKuningListActivity).prevCons = null
                                 Toasty.success(
                                     this@PkKuningListActivity,
                                     messageInsert,
@@ -228,7 +228,7 @@ class PkKuningListActivity : AppCompatActivity() {
     @SuppressLint("SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        UpdateMan().hideStatusNavigationBar(window)
+        UpdateMan().transparentStatusNavBar(window)
         setContentView(R.layout.activity_list_upload)
         urlCategory = PrefManager(this).dataReg!!
         tv_ver_header.text = "App ver: ${BuildConfig.VERSION_NAME}"
@@ -676,7 +676,7 @@ class PkKuningListActivity : AppCompatActivity() {
                     connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI)!!.state === NetworkInfo.State.CONNECTED
         val f = File(filePath + urlCategory)
         if ((connected && !f.exists())) {
-            updateListPupuk()
+            UpdateMan().updateListPupuk(this)
 
             val config = PRDownloaderConfig.newBuilder()
                 .setReadTimeout(30000)
@@ -845,79 +845,6 @@ class PkKuningListActivity : AppCompatActivity() {
                 "network_error.json"
             )
         }
-    }
-
-    fun updateListPupuk() {
-        val prefManager = PrefManager(this) //init shared preference
-        val strReq: StringRequest =
-            object : StringRequest(
-                Method.POST,
-                "https://srs-ssms.com/getListPupukParams.php",
-                Response.Listener { response ->
-                    try {
-                        val jObj = JSONObject(response)
-                        val success = jObj.getInt("status")
-
-                        // Check for error node in json
-                        val databaseHandler =
-                            PemupukanSQL(this)
-                        if (success == 1) {
-                            val version = jObj.getInt("version")
-                            databaseHandler.deleteDb()
-                            val dataListPupukArray = jObj.getJSONObject("listPupuk")
-                            val beforeSplitId = dataListPupukArray.getJSONArray("id")
-                            val beforeSplitNama = dataListPupukArray.getJSONArray("nama")
-                            Log.d("parsing", beforeSplitNama.toString())
-
-                            var idArray = ArrayList<Int>()
-                            for (i in 0 until beforeSplitId.length()) {
-                                idArray.add(beforeSplitId.getInt(i))
-                            }
-
-                            var namaArray = ArrayList<String>()
-                            for (i in 0 until beforeSplitNama.length()) {
-                                namaArray.add(beforeSplitNama.getString(i))
-                            }
-
-                            var statusQuery = 1L
-                            for (i in 0 until idArray.size) {
-                                val status = databaseHandler.addPupuk(
-                                    PupukList(
-                                        db_id = idArray[i],
-                                        db_pupuk = namaArray[i]
-                                    )
-                                )
-                                if (status == 0L) {
-                                    statusQuery = 0L
-                                }
-                            }
-
-                            if (statusQuery > -1) {
-                                Log.d("logPupuk", "${jObj.getString(Database.TAG_MESSAGE)}")
-                                prefManager.version = version
-                            } else {
-                                Log.d("logPupuk", "Terjadi kesalahan, hubungi pengembang")
-                                databaseHandler.deleteDb()
-                            }
-                        } else {
-                            Log.d("logPupuk", "${jObj.getString(Database.TAG_MESSAGE)}")
-                        }
-                    } catch (e: JSONException) {
-                        Log.d("logPupuk", "Data error, hubungi pengembang: $e")
-                        e.printStackTrace()
-                    }
-                },
-                Response.ErrorListener { error ->
-                    Log.d("logPupuk", "Terjadi kesalahan koneksi")
-                }) {
-                override fun getParams(): Map<String, String> {
-                    // Posting parameters to login url
-                    val params: MutableMap<String, String> = HashMap()
-                    params["version"] = prefManager.version.toString()
-                    return params
-                }
-            }
-        Volley.newRequestQueue(this).add(strReq)
     }
 
     private fun getBytesToMBString(bytes: Long): String? {

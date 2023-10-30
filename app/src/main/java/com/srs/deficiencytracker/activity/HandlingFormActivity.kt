@@ -76,6 +76,8 @@ open class HandlingFormActivity : AppCompatActivity() {
     private var getAfd = ""
     private var getBlok = ""
     private var getCons = ""
+    private var getStats = ""
+    private var getMode = ""
     private var getGPS = ""
     private var posPhoto = false
 
@@ -123,7 +125,7 @@ open class HandlingFormActivity : AppCompatActivity() {
     @SuppressLint("SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        UpdateMan().hideStatusNavigationBar(window)
+        UpdateMan().transparentStatusNavBar(window)
         setContentView(R.layout.activity_handling_form)
 
         getIdPk = getDataIntent("id")
@@ -131,7 +133,15 @@ open class HandlingFormActivity : AppCompatActivity() {
         getAfd = getDataIntent("afd")
         getBlok = getDataIntent("blok")
         getCons = getDataIntent("kondisi")
+        getStats = getDataIntent("status")
+        getMode = getDataIntent("mode")
         getGPS = getDataIntent("gps")
+
+        if (getMode == "4") {
+            svMainPupuk.visibility = View.GONE
+            temuanPupuk.visibility = View.VISIBLE
+            temuanPupuk.cvTemuan2.visibility = View.GONE
+        }
 
         rootDCIM = File(
             Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM),
@@ -190,7 +200,7 @@ open class HandlingFormActivity : AppCompatActivity() {
                         .repeat(0)
                         .playOn(findViewById(R.id.zoomPupuk))
                 } else {
-                    if (selectedPerlakuanArray.isNotEmpty()) {
+                    if (getMode == "4" || selectedPerlakuanArray.isNotEmpty()) {
                         initializeCameraCapture(imageCaptureCode1)
                     } else {
                         Toasty.warning(this, "Tambahkan perlakuan terlebih dahulu!").show()
@@ -343,32 +353,70 @@ open class HandlingFormActivity : AppCompatActivity() {
                                 }
                             }
                         } else {
-                            if (sp_jenis_hand.text == "Pilih Jenis Pupuk" || fotoArray.isEmpty()
-                            ) {
-                                AlertDialogUtility.alertDialog(
-                                    this,
-                                    "Ada field atau foto yang belum diisi!",
-                                    "warning.json"
-                                )
-                            } else {
-                                AlertDialogUtility.withTwoActions(
-                                    this@HandlingFormActivity,
-                                    "BATAL",
-                                    "SIMPAN",
-                                    "Yakin menyimpan data?",
-                                    "warning.json"
+                            if (getMode != "4") {
+                                if (sp_jenis_hand.text == "Pilih Jenis Pupuk" || fotoArray.isEmpty()
                                 ) {
-                                    inserting = true
-                                    clLayoutHand.visibility = View.VISIBLE
+                                    AlertDialogUtility.alertDialog(
+                                        this,
+                                        "Ada field atau foto yang belum diisi!",
+                                        "warning.json"
+                                    )
+                                } else {
+                                    AlertDialogUtility.withTwoActions(
+                                        this@HandlingFormActivity,
+                                        "BATAL",
+                                        "SIMPAN",
+                                        "Yakin menyimpan data?",
+                                        "warning.json"
+                                    ) {
+                                        inserting = true
+                                        clLayoutHand.visibility = View.VISIBLE
 
-                                    coroutineScope.launch {
-                                        withContext(Dispatchers.IO) {
-                                            insertData()
+                                        coroutineScope.launch {
+                                            withContext(Dispatchers.IO) {
+                                                insertData()
+                                            }
+
+                                            withContext(Dispatchers.Main) {
+                                                clLayoutHand.visibility = View.GONE
+                                                inserting = false
+                                            }
                                         }
+                                    }
+                                }
+                            } else {
+                                if (fname1.isEmpty()) {
+                                    AlertDialogUtility.alertDialog(
+                                        this,
+                                        "Ada foto yang belum diisi!",
+                                        "warning.json"
+                                    )
+                                } else {
+                                    AlertDialogUtility.withTwoActions(
+                                        this@HandlingFormActivity,
+                                        "BATAL",
+                                        "SIMPAN",
+                                        "Yakin menyimpan data?",
+                                        "warning.json"
+                                    ) {
+                                        komArray.add(
+                                            temuanPupuk.et_komentar_temuan.text.toString()
+                                                .replace(",", "|")
+                                        )
+                                        fotoArray.add(fname1)
 
-                                        withContext(Dispatchers.Main) {
-                                            clLayoutHand.visibility = View.GONE
-                                            inserting = false
+                                        inserting = true
+                                        clLayoutHand.visibility = View.VISIBLE
+
+                                        coroutineScope.launch {
+                                            withContext(Dispatchers.IO) {
+                                                insertData()
+                                            }
+
+                                            withContext(Dispatchers.Main) {
+                                                clLayoutHand.visibility = View.GONE
+                                                inserting = false
+                                            }
                                         }
                                     }
                                 }
@@ -391,6 +439,20 @@ open class HandlingFormActivity : AppCompatActivity() {
     }
 
     private fun insertData() {
+        val pm = PrefManagerEstate(this)
+        val pmPrevCons = try {
+            pm.prevCons!!
+        } catch (e: Exception) {
+            ""
+        }
+        val arrPrevCons = ArrayList<String>()
+        if (pmPrevCons.isNotEmpty()) {
+            val splitPrevCons = pm.prevCons!!.replace("[", "").replace("]", "").replace(" ", "").split(",")
+            for (a in splitPrevCons.indices) {
+                arrPrevCons.add(splitPrevCons[a])
+            }
+        }
+
         if (fotoArray.isNotEmpty()) {
             fname = fotoArray.toTypedArray().contentToString()
             komen = komArray.toTypedArray().contentToString()
@@ -411,6 +473,7 @@ open class HandlingFormActivity : AppCompatActivity() {
         val splitAfdPk = getAfd.split("$")
         val splitBlokPk = getBlok.split("$")
         val splitConsPk = getCons.split("$")
+        val splitStatsPk = getStats.split("$")
         for (a in splitIdPk.indices) {
             if (splitIdPk[a].isNotEmpty()) {
                 val dateNow = SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(
@@ -426,8 +489,8 @@ open class HandlingFormActivity : AppCompatActivity() {
                     estate = getEst,
                     afdeling = splitAfdPk[a],
                     blok = splitBlokPk[a],
-                    status = "Sudah",
-                    kondisi = splitConsPk[a],
+                    status = if (getMode == "4") splitStatsPk[a] else "Sudah",
+                    kondisi = if (getMode == "4") "Sembuh" else splitConsPk[a],
                     datetime = dateNow,
                     jenisPupukId = resultPerlakuan,
                     foto = fname.replace("[", "").replace("]", "")
@@ -457,9 +520,21 @@ open class HandlingFormActivity : AppCompatActivity() {
                                 val item =
                                     blokObjMaps.getJSONObject(index)
                                 if (splitIdPk[a] == index) {
-                                    item.put("status", "Sudah")
+                                    if (getMode == "4") {
+                                        arrPrevCons.removeIf { it.contains(splitIdPk[a]) }
+                                        val tglAct = if (item.has("tanggal")) {
+                                            "$${item.getString("tanggal").replace(" ", "|")}"
+                                        } else {
+                                            "$"
+                                        }
+                                        arrPrevCons.add("${splitIdPk[a]}$${item.getString("kondisi")}$${item.getString("status")}$tglAct")
+
+                                        item.put("kondisi", "Sembuh")
+                                    } else {
+                                        item.put("status", "Sudah")
+                                        item.put("perlakuan", resultPerlakuan)
+                                    }
                                     item.put("tanggal", dateNow)
-                                    item.put("perlakuan", resultPerlakuan)
                                 }
                             }
                             fileMaps.writeText(objMaps.toString())
@@ -470,14 +545,29 @@ open class HandlingFormActivity : AppCompatActivity() {
                                     AlertDialogUtility.withSingleAction(
                                         this,
                                         "OK",
-                                        "Pemupukan Pokok Kuning telah tersimpan!",
+                                        "Data pokok kuning berhasil disimpan!",
                                         "success.json"
                                     ) {
+                                        if (arrPrevCons.isNotEmpty()) {
+                                            pm.prevCons =
+                                                arrPrevCons.toTypedArray().contentToString()
+                                        }
+
+                                        Toasty.info(
+                                            this,
+                                            "Mohon tunggu, sedang memproses peta kembali..",
+                                            Toasty.LENGTH_LONG
+                                        ).show()
+
                                         val intent =
-                                            Intent(
-                                                this,
-                                                MainActivity::class.java
+                                            Intent(this, MapsActivity::class.java).putExtra(
+                                                "est",
+                                                pm.estate
                                             )
+                                                .putExtra("afd", pm.afdeling)
+                                                .putExtra("blok", pm.blok)
+                                                .putExtra("blokPlot", pm.blokPlot)
+                                                .putExtra("idPk", getIdPk)
                                         startActivity(intent)
                                         finishAffinity()
                                     }
@@ -524,15 +614,17 @@ open class HandlingFormActivity : AppCompatActivity() {
     private fun updateSpeedDialItems(sdSaveUpload: SpeedDialView) {
         sdSaveUpload.clearActionItems() // Remove all existing action items
 
-        createSD(
-            if (!posPhoto) "TAMBAH FOTO" else "KEMBALI",
-            R.id.openCamera,
-            if (!posPhoto) R.drawable.ic_baseline_add_a_photo_24 else R.drawable.baseline_arrow_back_24,
-            if (!posPhoto) R.color.chart_blue4 else R.color.colorRed_A400
-        )
+        if (getMode != "4") {
+            createSD(
+                if (!posPhoto) "TAMBAH FOTO" else "KEMBALI",
+                R.id.openCamera,
+                if (!posPhoto) R.drawable.ic_baseline_add_a_photo_24 else R.drawable.baseline_arrow_back_24,
+                if (!posPhoto) R.color.chart_blue4 else R.color.colorRed_A400
+            )
+        }
 
         createSD(
-            "SIMPAN" + if (!posPhoto) " DATA" else " FOTO",
+            "SIMPAN" + if (!posPhoto || getMode == "4") " DATA" else " FOTO",
             R.id.saveHandling,
             R.drawable.ic_save_black_24dp,
             R.color.green_basiccolor
@@ -747,7 +839,8 @@ open class HandlingFormActivity : AppCompatActivity() {
                     val splitBlokPk = getBlok.split("$")
                     dateFormat =
                         SimpleDateFormat("yyyyMdd_HHmmss").format(Calendar.getInstance().time) //nentuin tanggal dan jam
-                    var pictureFile = "PK_${dateFormat}_${getEst}_${splitAfdPk[splitAfdPk.lastIndex]}_${splitBlokPk[splitBlokPk.lastIndex]}"
+                    var pictureFile =
+                        "PK_${dateFormat}_${getEst}_${splitAfdPk[splitAfdPk.lastIndex]}_${splitBlokPk[splitBlokPk.lastIndex]}"
 
                     selectedSize?.let { size ->
                         val surfaceTexture = textureViewCam.surfaceTexture
@@ -838,17 +931,37 @@ open class HandlingFormActivity : AppCompatActivity() {
                                 Locale("id", "ID")
                             ).format(Calendar.getInstance().time) //nentuin tanggal dan jam
 
-                            val wmDt = selectedPerlakuanArray.toTypedArray().contentToString().replace("[", "").replace("]", "")
-                            val fixWmDt = if (wmDt.length <= 50) {
-                                wmDt
+                            val wmDt = if (getMode != "4") {
+                                val content =
+                                    selectedPerlakuanArray.toTypedArray().contentToString()
+                                        .replace("[", "").replace("]", "")
+                                if (content.length <= 50) content else "${
+                                    content.substring(
+                                        0,
+                                        50
+                                    )
+                                }.."
                             } else {
-                                wmDt.substring(0, 50) + ".."
+                                val content = temuanPupuk.et_komentar_temuan.text.toString()
+                                if (content.isNotEmpty()) {
+                                    if (content.length <= 50) content else "${
+                                        content.substring(
+                                            0,
+                                            50
+                                        )
+                                    }.."
+                                } else {
+                                    content
+                                }
+                            }
+                            val wmText = if (wmDt.isNotEmpty()) {
+                                "${wmDt}\n$dateWM"
+                            } else {
+                                dateWM
                             }
                             val watermarkedBitmap = addWatermark(
                                 bitmap,
-                                "POKOK KUNING/$getEst/${splitAfdPk[splitAfdPk.lastIndex]}/${splitBlokPk[splitBlokPk.lastIndex]}\n${
-                                    fixWmDt
-                                }\n$dateWM"
+                                "POKOK KUNING/$getEst/${splitAfdPk[splitAfdPk.lastIndex]}/${splitBlokPk[splitBlokPk.lastIndex]}\n" + wmText
                             )
 
                             try {
@@ -860,7 +973,8 @@ open class HandlingFormActivity : AppCompatActivity() {
                                 val sourceWidth = watermarkedBitmap.width
                                 val sourceHeight = watermarkedBitmap.height
 
-                                val maxHeight = (maxWidth.toFloat() / sourceWidth.toFloat() * sourceHeight).toInt()
+                                val maxHeight =
+                                    (maxWidth.toFloat() / sourceWidth.toFloat() * sourceHeight).toInt()
 
                                 var scaledBitmap: Bitmap? = null
 
@@ -871,10 +985,19 @@ open class HandlingFormActivity : AppCompatActivity() {
 
                                     val aspectRatio = sourceWidth.toFloat() / sourceHeight.toFloat()
                                     val newWidth = min(maxWidth, (maxHeight * aspectRatio).toInt())
-                                    scaledBitmap = Bitmap.createScaledBitmap(watermarkedBitmap, newWidth, maxHeight, true)
+                                    scaledBitmap = Bitmap.createScaledBitmap(
+                                        watermarkedBitmap,
+                                        newWidth,
+                                        maxHeight,
+                                        true
+                                    )
 
                                     val outputStream = ByteArrayOutputStream()
-                                    scaledBitmap.compress(Bitmap.CompressFormat.JPEG, quality, outputStream)
+                                    scaledBitmap.compress(
+                                        Bitmap.CompressFormat.JPEG,
+                                        quality,
+                                        outputStream
+                                    )
 
                                     if (outputStream.size() > targetSizeBytes) {
                                         quality -= 5

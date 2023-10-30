@@ -50,6 +50,7 @@ import kotlinx.android.synthetic.main.activity_form_est.rb_maps3
 import kotlinx.android.synthetic.main.activity_form_est.sp_afd_form
 import kotlinx.android.synthetic.main.activity_form_est.sp_blok_form
 import kotlinx.android.synthetic.main.activity_form_est.sp_est_form
+import kotlinx.android.synthetic.main.activity_maps.mapView
 import kotlinx.android.synthetic.main.header_form.tv_update_header_gudang
 import kotlinx.android.synthetic.main.header_form.tv_ver_app_header_gudang
 import kotlinx.android.synthetic.main.header_form.view.icLocationHeader
@@ -69,10 +70,15 @@ open class FormMapsActivity : AppCompatActivity() {
     private var luas = ""
     private var sph = 0
 
+    private var pkPath = ""
+    private var urlCategory = ""
+    private var fileMaps: File? = null
+
     val pilihEstate = "Pilih Estate"
     val pilihAfdeling = "Pilih Afdeling"
     val pilihBlok = "Pilih Blok"
 
+    private var estateArrPk = ArrayList<String>()
     private var countYellowTrees = ArrayList<String>()
     private var estateArrayList = ArrayList<String>()
     private var estateArray = ArrayList<String>()
@@ -98,7 +104,7 @@ open class FormMapsActivity : AppCompatActivity() {
     @SuppressLint("SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        UpdateMan().hideStatusNavigationBar(window)
+        UpdateMan().transparentStatusNavBar(window)
         setContentView(R.layout.activity_form_est)
 
         val pm = PrefManagerEstate(this@FormMapsActivity)
@@ -117,6 +123,22 @@ open class FormMapsActivity : AppCompatActivity() {
         rb_maps1.isChecked = true
         llMapsAfd.visibility = View.GONE
         llMapsBlok.visibility = View.GONE
+
+        urlCategory = PrefManager(this).dataReg!!
+        pkPath = this.getExternalFilesDir(null)?.absolutePath + "/MAIN/pk" + urlCategory
+        fileMaps = File(pkPath)
+        if (fileMaps!!.exists()) {
+            try {
+                val readMaps = fileMaps!!.readText()
+                val objMaps = JSONObject(readMaps)
+                for (key in objMaps.keys()) {
+                    estateArrPk.add(key)
+                }
+            } catch (e: Exception) {
+                Log.d("ET", "Error: $e")
+                e.printStackTrace()
+            }
+        }
 
         rb_maps1.setOnCheckedChangeListener { compoundButton, b ->
             if (b) {
@@ -150,7 +172,6 @@ open class FormMapsActivity : AppCompatActivity() {
             }
         }
 
-        var urlCategory = PrefManager(this).dataReg!!
         val obj = JSONObject(
             FileMan().onlineInputStream(
                 urlCategory,
@@ -253,7 +274,7 @@ open class FormMapsActivity : AppCompatActivity() {
                 }
             )
         }
-        sp_est_form.setItems(estateArrayList.sorted())
+        sp_est_form.setItems(estateArrPk.sorted())
         sp_est_form.text = pilihEstate
 
         val blokPlotArrayList = ArrayList<String>()
@@ -303,18 +324,18 @@ open class FormMapsActivity : AppCompatActivity() {
                 }
             }
 
-            val pkPath = this.getExternalFilesDir(null)?.absolutePath + "/MAIN/pk" + urlCategory
-            val fileMaps = File(pkPath)
-            if (fileMaps.exists()) {
+            if (fileMaps!!.exists()) {
                 try {
-                    val readMaps = fileMaps.readText()
+                    val readMaps = fileMaps!!.readText()
                     val objMaps = JSONObject(readMaps)
                     val estObjMaps = objMaps.getJSONObject(est)
                     val afdObjMaps = estObjMaps.getJSONObject(afd)
                     for (indexAfd in afdObjMaps.keys()) {
                         if (!blokArrayList.contains(indexAfd)) {
-                            blokArrayList.add(indexAfd)
-                            blokPlotArrayList.add(indexAfd)
+                            if (indexAfd.isNotEmpty()) {
+                                blokArrayList.add(indexAfd)
+                                blokPlotArrayList.add(indexAfd)
+                            }
                         }
                     }
                 } catch (e: Exception) {
@@ -391,18 +412,18 @@ open class FormMapsActivity : AppCompatActivity() {
                     }
                 }
 
-                val pkPath = this.getExternalFilesDir(null)?.absolutePath + "/MAIN/pk" + urlCategory
-                val fileMaps = File(pkPath)
-                if (fileMaps.exists()) {
+                if (fileMaps!!.exists()) {
                     try {
-                        val readMaps = fileMaps.readText()
+                        val readMaps = fileMaps!!.readText()
                         val objMaps = JSONObject(readMaps)
                         val estObjMaps = objMaps.getJSONObject(est)
                         val afdObjMaps = estObjMaps.getJSONObject(afd)
                         for (indexAfd in afdObjMaps.keys()) {
                             if (!blokArrayList.contains(indexAfd)) {
-                                blokArrayList.add(indexAfd)
-                                blokPlotArrayList.add(indexAfd)
+                                if (indexAfd.isNotEmpty()) {
+                                    blokArrayList.add(indexAfd)
+                                    blokPlotArrayList.add(indexAfd)
+                                }
                             }
                         }
                     } catch (e: Exception) {
@@ -432,12 +453,9 @@ open class FormMapsActivity : AppCompatActivity() {
             try {
                 countYellowTrees.clear()
 
-                val pkPath =
-                    this.getExternalFilesDir(null)?.absolutePath + "/MAIN/pk" + PrefManager(this).dataReg!!
-                val fileMaps = File(pkPath)
-                if (fileMaps.exists()) {
+                if (fileMaps!!.exists()) {
                     try {
-                        val readMaps = fileMaps.readText()
+                        val readMaps = fileMaps!!.readText()
                         val objMaps = JSONObject(readMaps)
 
                         val estObjMaps = objMaps.getJSONObject(est)

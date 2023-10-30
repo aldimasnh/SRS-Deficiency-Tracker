@@ -2,10 +2,8 @@ package com.srs.deficiencytracker.utilities
 
 import android.content.Intent
 import android.os.Bundle
-import android.util.Log
 import android.view.View
 import android.widget.LinearLayout
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.android.volley.Response
 import com.android.volley.toolbox.StringRequest
@@ -19,7 +17,7 @@ import kotlinx.android.synthetic.main.activity_checklist_est.checkboxContainerEs
 import kotlinx.android.synthetic.main.activity_checklist_est.loadingCheckEst
 import kotlinx.android.synthetic.main.activity_checklist_est.lottieCbEst
 import kotlinx.android.synthetic.main.activity_checklist_est.progressBarCheckEst
-import kotlinx.android.synthetic.main.activity_main.loadingMain
+import kotlinx.android.synthetic.main.loading_file_layout.view.tvHintFileLoader
 import org.json.JSONException
 import org.json.JSONObject
 
@@ -29,7 +27,7 @@ class ChecklistEstate : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        UpdateMan().hideStatusNavigationBar(window)
+        UpdateMan().transparentStatusNavBar(window)
         setContentView(R.layout.activity_checklist_est)
 
         getSync = try {
@@ -38,8 +36,8 @@ class ChecklistEstate : AppCompatActivity() {
             ""
         }
 
+        loadingCheckEst.tvHintFileLoader.text = "Pastikan jaringan anda stabil dan perangkat sudah terkoneksi internet"
         val urlCategory = PrefManager(this).dataReg!!
-
         lottieCbEst.setAnimation("wait.json")
         lottieCbEst.loop(true)
         lottieCbEst.playAnimation()

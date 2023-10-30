@@ -48,7 +48,7 @@
                 android:id="@+id/searchEditText"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="Input..."/>
+                android:hint="Search..."/>
 
             <com.jaredrummler.materialspinner.MaterialSpinner
                 android:id="@+id/sp_jenis_hand"
