@@ -2,6 +2,7 @@ package com.srs.deficiencytracker.utilities
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.widget.LinearLayout
 import androidx.appcompat.app.AppCompatActivity
@@ -13,6 +14,7 @@ import com.srs.deficiencytracker.MainActivity
 import com.srs.deficiencytracker.R
 import es.dmoral.toasty.Toasty
 import kotlinx.android.synthetic.main.activity_checklist_est.btSaveCheckEst
+import kotlinx.android.synthetic.main.activity_checklist_est.checkAllEst
 import kotlinx.android.synthetic.main.activity_checklist_est.checkboxContainerEst
 import kotlinx.android.synthetic.main.activity_checklist_est.loadingCheckEst
 import kotlinx.android.synthetic.main.activity_checklist_est.lottieCbEst
@@ -87,9 +89,27 @@ class ChecklistEstate : AppCompatActivity() {
                             checkboxContainerEst.addView(checkBox)
                         }
 
-                        btSaveCheckEst.setOnClickListener {
-                            val selectedCheckboxEst = ArrayList<String>()
+                        checkAllEst.visibility = View.VISIBLE
 
+                        var allEstChecked = false
+                        val selectedCheckboxEst = ArrayList<String>()
+
+                        checkAllEst.isChecked = allEstChecked
+                        checkAllEst.setOnCheckedChangeListener { _, isChecked ->
+                            allEstChecked = !allEstChecked
+                            if (allEstChecked) {
+                                for (checkBox in mtCheckBox) {
+                                    checkBox.isChecked = true
+                                }
+                            } else {
+                                for (checkBox in mtCheckBox) {
+                                    checkBox.isChecked = false
+                                }
+                            }
+                        }
+
+                        btSaveCheckEst.setOnClickListener {
+                            selectedCheckboxEst.clear()
                             for (checkbox in mtCheckBox) {
                                 if (checkbox.isChecked) {
                                     selectedCheckboxEst.add(checkbox.text.toString())

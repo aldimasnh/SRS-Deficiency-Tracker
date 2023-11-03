@@ -28,6 +28,7 @@ class PemupukanSQL(context: Context) : SQLiteOpenHelper(
         // DB List Pupuk
         const val db_id = "id"
         const val db_namaPupuk = "nama"
+        const val db_satuan = "satuan"
 
         // DB Pokok Kuning
         const val db_idPk = "idPk"
@@ -38,6 +39,7 @@ class PemupukanSQL(context: Context) : SQLiteOpenHelper(
         const val db_kondisi = "kondisi"
         const val db_datetime = "datetime"
         const val db_jenisPupukID = "jenis_pupuk_id"
+        const val db_dosisPupuk = "dosis_pupuk"
         const val db_photo = "foto"
         const val db_komen = "komentar"
         const val db_app_ver = "app_version"
@@ -47,7 +49,7 @@ class PemupukanSQL(context: Context) : SQLiteOpenHelper(
     @PrimaryKey(autoGenerate = true)
     override fun onCreate(db: SQLiteDatabase?) {
         val createTablePupuk =
-            ("CREATE TABLE $db_tabPupuk ($db_id INTEGER PRIMARY KEY, $db_namaPupuk VARCHAR)")
+            ("CREATE TABLE $db_tabPupuk ($db_id INTEGER PRIMARY KEY, $db_namaPupuk VARCHAR, $db_satuan VARCHAR)")
         val createTablePkKuning =
             ("CREATE TABLE $db_tabPkKuning (" +
                     "$db_id INTEGER PRIMARY KEY, " +
@@ -59,6 +61,7 @@ class PemupukanSQL(context: Context) : SQLiteOpenHelper(
                     "$db_kondisi VARCHAR, " +
                     "$db_datetime VARCHAR, " +
                     "$db_jenisPupukID VARCHAR, " +
+                    "$db_dosisPupuk VARCHAR, " +
                     "$db_photo VARCHAR," +
                     "$db_komen VARCHAR, " +
                     "$db_archive INTEGER, " +
@@ -74,6 +77,12 @@ class PemupukanSQL(context: Context) : SQLiteOpenHelper(
         onCreate(db)
     }
 
+    fun deleteDbPupuk() {
+        val db = this.writableDatabase
+        db.delete(db_tabPupuk, null, null)
+        db.close()
+    }
+
     fun deleteDb() {
         val db = this.writableDatabase
         db.delete(db_tabPupuk, null, null)
@@ -87,6 +96,7 @@ class PemupukanSQL(context: Context) : SQLiteOpenHelper(
         val contentValues = ContentValues()
         contentValues.put(db_id, addPupuk.db_id)
         contentValues.put(db_namaPupuk, addPupuk.db_pupuk)
+        contentValues.put(db_satuan, addPupuk.db_satuan)
         val success = db.insert(db_tabPupuk, null, contentValues)
         db.close()
         return success
@@ -101,6 +111,7 @@ class PemupukanSQL(context: Context) : SQLiteOpenHelper(
         kondisi: String,
         datetime: String,
         jenisPupukId: String,
+        dosis: String,
         foto: String,
         komen: String,
         app_ver: String
@@ -115,6 +126,7 @@ class PemupukanSQL(context: Context) : SQLiteOpenHelper(
         contentValues.put(db_kondisi, kondisi)
         contentValues.put(db_datetime, datetime)
         contentValues.put(db_jenisPupukID, jenisPupukId)
+        contentValues.put(db_dosisPupuk, dosis)
         contentValues.put(db_photo, foto)
         contentValues.put(db_komen, komen)
         contentValues.put(db_archive, 0)
