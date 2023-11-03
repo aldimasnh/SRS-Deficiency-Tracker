@@ -40,6 +40,7 @@ import com.srs.deficiencytracker.database.PemupukanSQL.Companion.db_app_ver
 import com.srs.deficiencytracker.database.PemupukanSQL.Companion.db_archive
 import com.srs.deficiencytracker.database.PemupukanSQL.Companion.db_blok
 import com.srs.deficiencytracker.database.PemupukanSQL.Companion.db_datetime
+import com.srs.deficiencytracker.database.PemupukanSQL.Companion.db_dosisPupuk
 import com.srs.deficiencytracker.database.PemupukanSQL.Companion.db_estate
 import com.srs.deficiencytracker.database.PemupukanSQL.Companion.db_id
 import com.srs.deficiencytracker.database.PemupukanSQL.Companion.db_idPk
@@ -90,7 +91,7 @@ class PkKuningListActivity : AppCompatActivity() {
 
     //upload
     private val urlCekFoto = "https://srs-ssms.com/deficiency_tracker/checkFotoTracker.php"
-    private val urlInsert = "https://srs-ssms.com/deficiency_tracker/postDataTracker3.php"
+    private val urlInsert = "https://srs-ssms.com/deficiency_tracker/postDataTracker4.php"
     var serverURL: String = "https://srs-ssms.com/deficiency_tracker/recordFotoTracker.php"
     private val client = OkHttpClient()
 
@@ -219,6 +220,7 @@ class PkKuningListActivity : AppCompatActivity() {
     val kondisiArray = ArrayList<String>()
     val datetimeArray = ArrayList<String>()
     val jenisPupukArray = ArrayList<String>()
+    val dosisPupukArray = ArrayList<String>()
     val photoArray = ArrayList<String>()
     val komenArray = ArrayList<String>()
     val appVerArray = ArrayList<String>()
@@ -241,7 +243,7 @@ class PkKuningListActivity : AppCompatActivity() {
             "0"
         }
 
-        loadingUpload.tvHintFileLoader.text = "Mohon ditunggu, sedang memproses"
+        loadingUpload.tvHintFileLoader.text = "Mohon tunggu, sedang memproses"
         val archiveNotEmpty = getArchive.isNotEmpty()
         if (archiveNotEmpty || PemupukanSQL(this).setRecordPkKuning().toInt() > 0) {
             switchListUpload.isChecked = archiveNotEmpty && getArchive.toInt() == 1
@@ -404,6 +406,7 @@ class PkKuningListActivity : AppCompatActivity() {
                     kondisiArray.add(getData(db_kondisi, c))
                     datetimeArray.add(getData(db_datetime, c))
                     jenisPupukArray.add(getData(db_jenisPupukID, c))
+                    dosisPupukArray.add(getData(db_dosisPupuk, c))
                     photoArray.add(getData(db_photo, c))
                     val arrayFoto =
                         getData(db_photo, c).split("$")
@@ -508,6 +511,7 @@ class PkKuningListActivity : AppCompatActivity() {
         kondisiUp: String,
         dateUp: String,
         jenisPupukUp: String,
+        dosisPupukUp: String,
         photoUp: String,
         komenUp: String,
         appVerUp: String
@@ -572,6 +576,7 @@ class PkKuningListActivity : AppCompatActivity() {
                 params[db_kondisi] = kondisiUp
                 params[db_datetime] = dateUp
                 params[db_jenisPupukID] = jenisPupukUp
+                params[db_dosisPupuk] = dosisPupukUp
                 params[db_photo] = photoUp
                 params[db_komen] = komenUp
                 params[db_app_ver] = appVerUp
@@ -632,6 +637,7 @@ class PkKuningListActivity : AppCompatActivity() {
                                 kondisiUp = kondisiArray[i],
                                 dateUp = datetimeArray[i],
                                 jenisPupukUp = jenisPupukArray[i],
+                                dosisPupukUp = dosisPupukArray[i],
                                 photoUp = photoArray[i],
                                 komenUp = komenArray[i],
                                 appVerUp = appVerArray[i]

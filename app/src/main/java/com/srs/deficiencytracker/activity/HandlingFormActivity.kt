@@ -13,15 +13,19 @@ import android.media.ImageReader
 import android.net.Uri
 import android.os.*
 import android.text.Editable
+import android.text.InputType
 import android.text.TextWatcher
 import android.util.Log
 import android.util.Rational
 import android.util.Size
 import android.util.TypedValue
+import android.view.Gravity
 import android.view.Surface
 import android.view.TextureView
 import android.view.View
+import android.view.ViewGroup
 import android.view.WindowManager
+import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
@@ -38,7 +42,6 @@ import com.jaredrummler.materialspinner.MaterialSpinner
 import com.leinardi.android.speeddial.SpeedDialActionItem
 import com.leinardi.android.speeddial.SpeedDialView
 import com.srs.deficiencytracker.BuildConfig
-import com.srs.deficiencytracker.MainActivity
 import com.srs.deficiencytracker.R
 import com.srs.deficiencytracker.database.PemupukanSQL
 import com.srs.deficiencytracker.utilities.AlertDialogUtility
@@ -81,12 +84,15 @@ open class HandlingFormActivity : AppCompatActivity() {
     private var getGPS = ""
     private var posPhoto = false
 
+    private val editTexts = mutableListOf<EditText>()
     private var perlakuanArray = ArrayList<String>()
     private var perlakuanIdArray = ArrayList<Int>()
+    private var perlakuanSatuanArray = ArrayList<String>()
 
     private var selectedPerlakuanArray = ArrayList<String>()
     private var selectedPerlakuanIdArray = ArrayList<Int>()
 
+    private var dosisPupuk = ""
     private var komen = ""
     private var komenResult = ""
 
@@ -137,10 +143,12 @@ open class HandlingFormActivity : AppCompatActivity() {
         getMode = getDataIntent("mode")
         getGPS = getDataIntent("gps")
 
+        temuanPupuk.et_komentar_temuan.hint = "Metode aplikasi?"
         if (getMode == "4") {
             svMainPupuk.visibility = View.GONE
             temuanPupuk.visibility = View.VISIBLE
             temuanPupuk.cvTemuan2.visibility = View.GONE
+            temuanPupuk.et_komentar_temuan.hint = "Keterangan dan komentar"
         }
 
         rootDCIM = File(
@@ -159,7 +167,7 @@ open class HandlingFormActivity : AppCompatActivity() {
         @Suppress("DEPRECATION")
         loadingHand.lottieFileLoader.loop(true)
         loadingHand.lottieFileLoader.playAnimation()
-        loadingHand.tvHintFileLoader.text = "Mohon ditunggu, sedang memproses"
+        loadingHand.tvHintFileLoader.text = "Mohon tunggu, sedang memproses"
 
         getListPupuk()
         header_hand.icLocationHeader.visibility = View.GONE
@@ -232,6 +240,54 @@ open class HandlingFormActivity : AppCompatActivity() {
                         selectedPerlakuanArray.add(perlakuanArray[i])
                         selectedPerlakuanIdArray.add(perlakuanIdArray[i])
 
+                        // Create Linear Layout Field Dosis Satuan
+                        val labelText = TextView(this)
+                        labelText.layoutParams = ViewGroup.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.WRAP_CONTENT
+                        )
+                        labelText.setTextColor(ContextCompat.getColor(this, R.color.black))
+                        labelText.typeface = ResourcesCompat.getFont(this, R.font.seguisb)
+                        labelText.text = "Dosis ${perlakuanArray[i]}" // Set the label text
+                        labelText.textSize = 17f
+                        llDosisHand.addView(labelText)
+
+                        val linearLayout = LinearLayout(this)
+                        val params = LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.MATCH_PARENT,
+                            LinearLayout.LayoutParams.WRAP_CONTENT
+                        )
+                        params.setMargins(0, 0, 0, 25)
+                        linearLayout.layoutParams = params
+                        linearLayout.orientation = LinearLayout.HORIZONTAL
+
+                        val inputDosis = EditText(this)
+                        inputDosis.layoutParams = LinearLayout.LayoutParams(
+                            0,
+                            LinearLayout.LayoutParams.WRAP_CONTENT,
+                            1.0f
+                        )
+                        inputDosis.gravity = Gravity.CENTER_HORIZONTAL
+                        inputDosis.hint = "20"
+                        inputDosis.setHintTextColor(ContextCompat.getColor(this, R.color.grey_card))
+                        inputDosis.inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
+                        editTexts.add(inputDosis)
+
+                        val textSatuan = TextView(this)
+                        textSatuan.layoutParams = LinearLayout.LayoutParams(
+                            0,
+                            LinearLayout.LayoutParams.WRAP_CONTENT,
+                            1.0f
+                        )
+                        textSatuan.typeface = ResourcesCompat.getFont(this, R.font.seguisb)
+                        textSatuan.textSize = 15f
+                        textSatuan.text = perlakuanSatuanArray[i]
+
+                        linearLayout.addView(inputDosis)
+                        linearLayout.addView(textSatuan)
+                        llDosisHand.addView(linearLayout)
+                        // End Create Linear Layout Field Dosis Satuan
+
                         val chip = Chip(this)
                         val paddingDp = TypedValue.applyDimension(
                             TypedValue.COMPLEX_UNIT_DIP,
@@ -251,11 +307,16 @@ open class HandlingFormActivity : AppCompatActivity() {
                                 if (chipText == selectedPerlakuanArray[z]) {
                                     selectedPerlakuanArray.removeAt(z)
                                     selectedPerlakuanIdArray.removeAt(z)
+                                    editTexts.removeAt(z)
                                     adapter.notifyDataSetChanged()
                                     sp_jenis_hand.setAdapter(adapter)
                                     break
                                 }
                             }
+                            llDosisHand.removeView(labelText)
+                            linearLayout.removeView(textSatuan)
+                            linearLayout.removeView(inputDosis)
+                            llDosisHand.removeView(linearLayout)
                             chip_hand.removeView(chip)
                         }
                         chip_hand.addView(chip)
@@ -474,16 +535,19 @@ open class HandlingFormActivity : AppCompatActivity() {
         val splitBlokPk = getBlok.split("$")
         val splitConsPk = getCons.split("$")
         val splitStatsPk = getStats.split("$")
+
+        val dateNow = SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(
+            Calendar.getInstance().time
+        )
+        val resultPerlakuan = selectedPerlakuanIdArray.joinToString("$") { it.toString() }
+        dosisPupuk = try {
+            editTexts.map { it.text.toString().ifEmpty { "0" } }.joinToString("$") { it }
+        } catch (e: Exception) {
+            ""
+        }
+
         for (a in splitIdPk.indices) {
             if (splitIdPk[a].isNotEmpty()) {
-                val dateNow = SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(
-                    Calendar.getInstance().time
-                )
-                val resultPerlakuan = selectedPerlakuanIdArray.toTypedArray()
-                    .contentToString().replace("[", "")
-                    .replace("]", "").replace(" ", "")
-                    .replace(",", "$")
-
                 val status = databaseHandler.addPokokKuning(
                     idPk = splitIdPk[a].toInt(),
                     estate = getEst,
@@ -493,6 +557,7 @@ open class HandlingFormActivity : AppCompatActivity() {
                     kondisi = if (getMode == "4") "Sembuh" else splitConsPk[a],
                     datetime = dateNow,
                     jenisPupukId = resultPerlakuan,
+                    dosis = dosisPupuk,
                     foto = fname.replace("[", "").replace("]", "")
                         .replace(",", "$").replace(" ", ""),
                     komen = komenResult,
@@ -1136,6 +1201,13 @@ open class HandlingFormActivity : AppCompatActivity() {
                             i.getInt(i.getColumnIndex(PemupukanSQL.db_id))
                         } catch (e: Exception) {
                             0
+                        }
+                    )
+                    perlakuanSatuanArray.add(
+                        try {
+                            i.getString(i.getColumnIndex(PemupukanSQL.db_satuan))
+                        } catch (e: Exception) {
+                            ""
                         }
                     )
                 } while (i!!.moveToNext())

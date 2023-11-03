@@ -30,6 +30,7 @@ import android.provider.Settings
 import android.util.Log
 import android.view.View
 import android.view.animation.AnimationUtils
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -73,6 +74,12 @@ import kotlinx.android.synthetic.main.activity_maps.loadingVerif
 import kotlinx.android.synthetic.main.activity_maps.mapView
 import kotlinx.android.synthetic.main.activity_maps.tvAccuracyMaps
 import kotlinx.android.synthetic.main.activity_maps.tvBlokMaps
+import kotlinx.android.synthetic.main.activity_maps.tvInfoAct
+import kotlinx.android.synthetic.main.activity_maps.tvInfoBlok
+import kotlinx.android.synthetic.main.activity_maps.tvInfoCM
+import kotlinx.android.synthetic.main.activity_maps.tvInfoMulti
+import kotlinx.android.synthetic.main.activity_maps.tvInfoSembuh
+import kotlinx.android.synthetic.main.activity_maps.tvInfoSingle
 import kotlinx.android.synthetic.main.activity_maps.tvJarakMaps
 import kotlinx.android.synthetic.main.activity_maps.tvJmlPkMaps
 import kotlinx.android.synthetic.main.activity_maps.tvKondisiMaps
@@ -114,9 +121,13 @@ open class MapsActivity : AppCompatActivity() {
     private lateinit var sensorManager: SensorManager
     private var previousDashedLine: DashedLineOverlay? = null
     private var currentlyClickedPolygon: Polygon? = null
-    private var minRangeAct = 25
-    private var maxActTrees = 0
-    private var modeAct = 0
+
+    private var accuracyRange = 0
+    private var minAccuracyGPS = 10
+    private var minRangeAct = 12
+    private var maxActBlok = 1500
+    private var maxActTrees = 1
+    private var modeAct = 1
 
     private var getIdPk = ""
     private var getEst = ""
@@ -154,7 +165,6 @@ open class MapsActivity : AppCompatActivity() {
     private var positionMaps = false
     private var firstGPS = false
     private var fixAccuracy = 0
-    private var accuracyRange = 0
     private var latPk: Double? = null
     private var lonPk: Double? = null
 
@@ -192,6 +202,7 @@ open class MapsActivity : AppCompatActivity() {
         )
     }
 
+    private val tvInfoData1 by lazy { arrayOf(tvInfoAct, tvInfoCM) }
     private val buttonData1 by lazy {
         Triple(
             arrayOf(fbActionMaps, fbCenterMaps),
@@ -200,6 +211,7 @@ open class MapsActivity : AppCompatActivity() {
         )
     }
 
+    private val tvInfoData2 by lazy { arrayOf(tvInfoSembuh, tvInfoBlok, tvInfoMulti, tvInfoSingle) }
     private val buttonData2 by lazy {
         Triple(
             arrayOf(fbPokokSembuh, fbBlok, fbMultiple, fbSingle),
@@ -213,9 +225,10 @@ open class MapsActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         UpdateMan().transparentStatusNavBar(window)
         setContentView(R.layout.activity_maps)
+
+        modeAct = 1
         setColorFButton()
 
-        modeAct = 0
         getIdPk = getDataIntent("idPk")
         getEst = getDataIntent("est")
         getAfd = getDataIntent("afd")
@@ -232,7 +245,7 @@ open class MapsActivity : AppCompatActivity() {
             minRangeAct = 9
         }
 
-        if (isProgrammer || jobTitles.any { prefManager.jabatan?.contains(it) == true }) {
+        if (jobTitles.any { prefManager.jabatan?.contains(it) == true }) {
             fbActionMaps.setImageResource(R.drawable.baseline_checklist_24)
         }
 
@@ -246,7 +259,7 @@ open class MapsActivity : AppCompatActivity() {
         @Suppress("DEPRECATION")
         loadingVerif.lottieFileLoader.loop(true)
         loadingVerif.lottieFileLoader.playAnimation()
-        loadingVerif.tvHintFileLoader.text = "Mohon ditunggu, sedang memproses"
+        loadingVerif.tvHintFileLoader.text = "Mohon tunggu, sedang memproses"
 
         getListPupuk()
         updateValuesFromBundle(savedInstanceState)
@@ -471,62 +484,96 @@ open class MapsActivity : AppCompatActivity() {
             polygon.setOnClickListener { poly, mv, ep ->
                 if (modeAct == 3) {
                     if (firstGPS) {
-                        val geopointUser = GeoPoint(lat!!.toDouble(), lon!!.toDouble())
-                        val isUserInsidePolygon = isPointInsidePolygon(geopointUser, coordinates[i])
+                        if (currentlyClickedPolygon != poly) {
+                            val geopointUser = GeoPoint(lat!!.toDouble(), lon!!.toDouble())
+                            val isUserInsidePolygon =
+                                isPointInsidePolygon(geopointUser, coordinates[i])
 
-                        if (isProgrammer || isUserInsidePolygon) {
-                            markerIds.clear()
-                            markerAfd.clear()
-                            markerBlok.clear()
-                            markerCons.clear()
-                            markerStats.clear()
+                            if (isProgrammer || isUserInsidePolygon) {
+                                markerIds.clear()
+                                markerAfd.clear()
+                                markerBlok.clear()
+                                markerCons.clear()
+                                markerStats.clear()
 
-                            if (currentlyClickedPolygon != null) {
-                                currentlyClickedPolygon!!.fillPaint.color = 0x1523CB1F
-                            }
-                            poly.fillPaint.color =
-                                ContextCompat.getColor(this@MapsActivity, R.color.colorPrimaryDark)
-                            currentlyClickedPolygon = poly
-
-                            for (j in modelMainList.indices) {
-                                val geopointPk =
-                                    GeoPoint(modelMainList[j].latPk, modelMainList[j].lonPk)
-                                val isMarkerInsidePolygon =
-                                    isPointInsidePolygon(geopointPk, coordinates[i])
-
-                                val polyId = modelMainList[j].idPk
-                                val polyAfdl = modelMainList[j].afdPk
-                                val polyBloks = modelMainList[j].blokPk
-                                val polyCon = modelMainList[j].kondisiPk
-                                val polyStat = modelMainList[j].statusPk
-
-                                fun procesInsidePoly() {
-                                    markerIds.add(polyId)
-                                    markerAfd.add(polyAfdl)
-                                    markerBlok.add(polyBloks)
-                                    markerCons.add(polyCon)
-                                    markerStats.add(polyStat)
+                                if (currentlyClickedPolygon != null) {
+                                    currentlyClickedPolygon!!.fillPaint.color = 0x1523CB1F
                                 }
 
-                                if (isMarkerInsidePolygon) {
-                                    if (isProgrammer || jobTitles.any { prefManager.jabatan?.contains(it) == true }) {
-                                        if (modeAct != 4) {
-                                            if (polyStat == "Sudah" || (polyStat != "Terverifikasi" && polyCon == "Sembuh")) {
+                                for (j in modelMainList.indices) {
+                                    val geopointPk =
+                                        GeoPoint(modelMainList[j].latPk, modelMainList[j].lonPk)
+                                    val isMarkerInsidePolygon =
+                                        isPointInsidePolygon(geopointPk, coordinates[i])
+
+                                    val polyId = modelMainList[j].idPk
+                                    val polyAfdl = modelMainList[j].afdPk
+                                    val polyBloks = modelMainList[j].blokPk
+                                    val polyCon = modelMainList[j].kondisiPk
+                                    val polyStat = modelMainList[j].statusPk
+
+                                    fun procesInsidePoly() {
+                                        markerIds.add(polyId)
+                                        markerAfd.add(polyAfdl)
+                                        markerBlok.add(polyBloks)
+                                        markerCons.add(polyCon)
+                                        markerStats.add(polyStat)
+                                    }
+
+                                    if (isMarkerInsidePolygon) {
+                                        if (jobTitles.any {
+                                                prefManager.jabatan?.contains(
+                                                    it
+                                                ) == true
+                                            }) {
+                                            if (modeAct != 4) {
+                                                if (polyStat == "Sudah" || (polyStat != "Terverifikasi" && polyCon == "Sembuh")) {
+                                                    procesInsidePoly()
+                                                }
+                                            }
+                                        } else {
+                                            if ((polyCon == "Berat" || polyCon == "Ringan" || polyCon == "Pucat") && polyStat == "Belum") {
                                                 procesInsidePoly()
                                             }
                                         }
-                                    } else {
-                                        if ((polyCon == "Berat" || polyCon == "Ringan" || polyCon == "Pucat") && polyStat == "Belum") {
-                                            procesInsidePoly()
-                                        }
                                     }
                                 }
+
+                                if (isProgrammer || markerIds.size >= maxActBlok) {
+                                    poly.fillPaint.color =
+                                        ContextCompat.getColor(
+                                            this@MapsActivity,
+                                            R.color.colorPrimaryDark
+                                        )
+                                    currentlyClickedPolygon = poly
+                                } else {
+                                    currentlyClickedPolygon = null
+                                    markerIds.clear()
+                                    markerAfd.clear()
+                                    markerBlok.clear()
+                                    markerCons.clear()
+                                    markerStats.clear()
+                                    Toasty.warning(
+                                        this@MapsActivity,
+                                        "Maaf, penanganan blok hanya dapat dilakukan jika titik melebihi $maxActBlok!",
+                                        Toasty.LENGTH_LONG
+                                    )
+                                        .show()
+                                }
+                                tvPokokMaps.text =
+                                    if (markerIds.isNotEmpty()) "${markerIds.size}/${markerIds.size}" else "-"
+                            } else {
+                                Toasty.warning(
+                                    this@MapsActivity,
+                                    "Anda belum berada di blok ${blokArray[i]}!",
+                                    Toasty.LENGTH_LONG
+                                )
+                                    .show()
                             }
-                            tvPokokMaps.text = "${markerIds.size}/${markerIds.size}"
                         } else {
                             Toasty.warning(
                                 this@MapsActivity,
-                                "Anda belum berada di blok ${blokArray[i]}!",
+                                "Anda telah memilih blok ${blokArray[i]}!",
                                 Toasty.LENGTH_LONG
                             )
                                 .show()
@@ -539,13 +586,6 @@ open class MapsActivity : AppCompatActivity() {
                         )
                             .show()
                     }
-                } else {
-                    if (modeAct == 0) {
-                        Toasty.warning(
-                            this@MapsActivity,
-                            "Silahkan pilih jenis penanganan terlebih dahulu!"
-                        ).show()
-                    }
                 }
 
                 return@setOnClickListener true
@@ -554,8 +594,8 @@ open class MapsActivity : AppCompatActivity() {
             mapView.invalidate()
         }
 
-        fbMenu1Maps.setOnClickListener { onAddButtonClicked(buttonData1) }
-        fbMenu2Maps.setOnClickListener { onAddButtonClicked(buttonData2) }
+        fbMenu1Maps.setOnClickListener { onAddButtonClicked(buttonData1, tvInfoData1) }
+        fbMenu2Maps.setOnClickListener { onAddButtonClicked(buttonData2, tvInfoData2) }
 
         fbActionMaps.setOnClickListener {
             if (firstGPS) {
@@ -566,14 +606,14 @@ open class MapsActivity : AppCompatActivity() {
                         Toasty.LENGTH_LONG
                     )
                         .show()
-                } else if (!isProgrammer && (fixAccuracy > 10 || accuracyRange > minRangeAct)) {
+                } else if (!isProgrammer && (fixAccuracy > minAccuracyGPS || accuracyRange > minRangeAct)) {
                     Toasty.warning(
                         this@MapsActivity,
                         "GPS belum memenuhi syarat!",
                         Toasty.LENGTH_LONG
                     )
                         .show()
-                } else if (isProgrammer || jobTitles.any { prefManager.jabatan?.contains(it) == true } && modeAct != 4) {
+                } else if (jobTitles.any { prefManager.jabatan?.contains(it) == true } && modeAct != 4) {
                     AlertDialogUtility.withTwoActions(
                         this@MapsActivity,
                         "Batal",
@@ -632,7 +672,7 @@ open class MapsActivity : AppCompatActivity() {
                     .show()
             }
 
-            onAddButtonClicked(buttonData1)
+            onAddButtonClicked(buttonData1, tvInfoData1)
         }
 
         fbCenterMaps.setOnClickListener {
@@ -648,7 +688,7 @@ open class MapsActivity : AppCompatActivity() {
                     .show()
             }
 
-            onAddButtonClicked(buttonData1)
+            onAddButtonClicked(buttonData1, tvInfoData1)
         }
 
         fbPokokSembuh.setOnClickListener {
@@ -664,7 +704,7 @@ open class MapsActivity : AppCompatActivity() {
                     this@MapsActivity,
                     "Batal",
                     "Ya",
-                    "Apakah anda ingin melakukan verifikasi pokok kuning?",
+                    "Apakah anda ingin melakukan verifikasi pokok sembuh?",
                     "warning.json"
                 ) {
                     if (modeAct == 2) {
@@ -694,7 +734,7 @@ open class MapsActivity : AppCompatActivity() {
 
                     Toasty.success(
                         this@MapsActivity,
-                        "Verifikasi pokok kuning berhasil dipilih!",
+                        "Verifikasi pokok sembuh berhasil dipilih!",
                         Toasty.LENGTH_LONG
                     )
                         .show()
@@ -702,7 +742,7 @@ open class MapsActivity : AppCompatActivity() {
                 }
             }
 
-            onAddButtonClicked(buttonData2)
+            onAddButtonClicked(buttonData2, tvInfoData2)
         }
 
         fbBlok.setOnClickListener {
@@ -721,12 +761,11 @@ open class MapsActivity : AppCompatActivity() {
                     "Apakah anda ingin melakukan penanganan berdasarkan blok?",
                     "warning.json"
                 ) {
-                    if (modeAct != 0) {
-                        resetMarker(false)
-                    }
+                    resetMarker(false)
 
+                    maxActTrees = 1
                     tvPokokMaps.text =
-                        if (markerIds.isNotEmpty()) "${markerIds.size}/$maxActTrees" else "-"
+                        if (markerIds.isNotEmpty()) "${markerIds.size}/${markerIds.size}" else "-"
                     modeAct = 3
 
                     Toasty.success(
@@ -739,7 +778,7 @@ open class MapsActivity : AppCompatActivity() {
                 }
             }
 
-            onAddButtonClicked(buttonData2)
+            onAddButtonClicked(buttonData2, tvInfoData2)
         }
 
         fbMultiple.setOnClickListener {
@@ -774,7 +813,7 @@ open class MapsActivity : AppCompatActivity() {
                         resetMarker(false)
                     }
 
-                    maxActTrees = 20
+                    maxActTrees = 5
                     tvPokokMaps.text =
                         if (markerIds.isNotEmpty()) "${markerIds.size}/$maxActTrees" else "-"
                     modeAct = 2
@@ -789,7 +828,7 @@ open class MapsActivity : AppCompatActivity() {
                 }
             }
 
-            onAddButtonClicked(buttonData2)
+            onAddButtonClicked(buttonData2, tvInfoData2)
         }
 
         fbSingle.setOnClickListener {
@@ -843,7 +882,7 @@ open class MapsActivity : AppCompatActivity() {
                 }
             }
 
-            onAddButtonClicked(buttonData2)
+            onAddButtonClicked(buttonData2, tvInfoData2)
         }
 
         getLocYellowTrees()
@@ -1198,7 +1237,7 @@ open class MapsActivity : AppCompatActivity() {
 
                 yellowMarkers.setOnMarkerClickListener(object : Marker.OnMarkerClickListener {
                     override fun onMarkerClick(marker: Marker, mapView: MapView): Boolean {
-                        if (maxActTrees != 0 && (modeAct == 1 || modeAct == 2 || modeAct == 4)) {
+                        if (modeAct == 1 || modeAct == 2 || modeAct == 4) {
                             if (marker == lastClickedMarker) {
                                 mapView.overlays.remove(previousDashedLine)
                                 lastClickedMarker?.closeInfoWindow()
@@ -1268,7 +1307,7 @@ open class MapsActivity : AppCompatActivity() {
                                     } else {
                                         if (marker == lastClickedMarker) {
                                             val textMax =
-                                                if (isProgrammer || jobTitles.any { prefManager.jabatan?.contains(it) == true }) "memverifikasi" else "menangani"
+                                                if (jobTitles.any { prefManager.jabatan?.contains(it) == true }) "memverifikasi" else "menangani"
                                             Toasty.warning(
                                                 this@MapsActivity,
                                                 "Maksimal hanya dapat $textMax $maxActTrees titik!"
@@ -1283,16 +1322,14 @@ open class MapsActivity : AppCompatActivity() {
                                 }
                             }
 
-                            if (isProgrammer || jobTitles.any { prefManager.jabatan?.contains(it) == true }) {
+                            if (jobTitles.any { prefManager.jabatan?.contains(it) == true }) {
                                 if (modeAct != 4) {
                                     if (markerStat == "Sudah" || (markerStat != "Terverifikasi" && markerCon == "Sembuh")) {
                                         processMarker()
                                     }
                                 } else {
-                                    if (modeAct != 0) {
-                                        if ((markerCon == "Berat" || markerCon == "Ringan" || markerCon == "Pucat") && markerStat == "Belum") {
-                                            processMarker()
-                                        }
+                                    if ((markerCon == "Berat" || markerCon == "Ringan" || markerCon == "Pucat") && markerStat == "Belum") {
+                                        processMarker()
                                     }
                                 }
                             } else {
@@ -1384,9 +1421,10 @@ open class MapsActivity : AppCompatActivity() {
                     kondisi = splitConsPk[a],
                     datetime = dateNow,
                     jenisPupukId = "",
+                    dosis = "",
                     foto = "",
                     komen = "",
-                    app_ver = ""
+                    app_ver = "${BuildConfig.VERSION_NAME};${Build.VERSION.RELEASE};${Build.MODEL};GA"
                 )
 
                 if (status > -1) {
@@ -1506,7 +1544,7 @@ open class MapsActivity : AppCompatActivity() {
         }
     }
 
-    private fun onAddButtonClicked(data: Triple<Array<FloatingActionButton>, Array<Boolean>, View>) {
+    private fun onAddButtonClicked(data: Triple<Array<FloatingActionButton>, Array<Boolean>, View>, data1: Array<TextView>) {
         val (buttons, isClickable, menuButton) = data
         val (rotateOpen, rotateClose) = if (menuButton == fbMenu1Maps) animations1 else animations2
         val (fromBottom, toBottom) = if (menuButton == fbMenu1Maps) animationsDrop1 else animationsDrop2
@@ -1516,12 +1554,16 @@ open class MapsActivity : AppCompatActivity() {
 
             if (!isClickable[index]) {
                 button.visibility = View.VISIBLE
+                data1[index].visibility = View.VISIBLE
                 button.isClickable = true
                 button.startAnimation(fromBottom)
+                data1[index].startAnimation(fromBottom)
             } else {
                 button.visibility = View.GONE
+                data1[index].visibility = View.GONE
                 button.isClickable = false
                 button.startAnimation(toBottom)
+                data1[index].startAnimation(toBottom)
             }
         }
 
@@ -1795,7 +1837,7 @@ open class MapsActivity : AppCompatActivity() {
             val accuracyInMeters = mCurrentLocation!!.accuracy
             fixAccuracy = ceil(accuracyInMeters).toInt()
             tvAccuracyMaps.text = "${fixAccuracy}m"
-            if (fixAccuracy > 10) {
+            if (fixAccuracy > minAccuracyGPS) {
                 tvAccuracyMaps.setTextColor(Color.RED)
             } else {
                 tvAccuracyMaps.setTextColor(
@@ -1927,14 +1969,19 @@ open class MapsActivity : AppCompatActivity() {
         }
     }
 
+    @SuppressLint("SetTextI18n")
     private fun rangePos() {
         if (latPk != null) {
-            val (rangeKm, rangeM) = rangeTreeAndCurrentPos(
+            val rangeUserToPk = rangeTreeAndCurrentPos(
                 GeoPoint(latPk!!, lonPk!!),
                 GeoPoint(lat!!.toDouble(), lon!!.toDouble())
             )
-            accuracyRange = rangeM
-            tvJarakMaps.text = rangeKm
+            accuracyRange = rangeUserToPk.toInt()
+            tvJarakMaps.text = if (rangeUserToPk >= 1000) {
+                "%.1f".format((rangeUserToPk / 1000.0)) + "km"
+            } else {
+                "$accuracyRange" + "m"
+            }
             if (accuracyRange > minRangeAct) {
                 tvJarakMaps.setTextColor(Color.RED)
             } else {
@@ -1945,9 +1992,7 @@ open class MapsActivity : AppCompatActivity() {
         }
     }
 
-    private fun rangeTreeAndCurrentPos(point1: GeoPoint, point2: GeoPoint): Pair<String, Int> {
-        val R = 6371 // Earth radius in kilometers
-
+    private fun rangeTreeAndCurrentPos(point1: GeoPoint, point2: GeoPoint): Double {
         val lat1 = Math.toRadians(point1.latitude)
         val lon1 = Math.toRadians(point1.longitude)
         val lat2 = Math.toRadians(point2.latitude)
@@ -1959,16 +2004,7 @@ open class MapsActivity : AppCompatActivity() {
         val a = sin(dlat / 2).pow(2) + cos(lat1) * cos(lat2) * sin(dlon / 2).pow(2)
         val c = 2 * atan2(sqrt(a), sqrt(1 - a))
 
-        val distanceInKilometers = R * c
-        val distanceInMeters = distanceInKilometers * 1000
-
-        val formattedDistanceKilometers = if (distanceInKilometers >= 1.0) {
-            "${String.format("%.1f", distanceInKilometers)}km"
-        } else {
-            "${String.format("%.0f", distanceInKilometers * 1000)}m"
-        }
-
-        return formattedDistanceKilometers to distanceInMeters.toInt()
+        return c * 6371000
     }
 
     @SuppressLint("Range")

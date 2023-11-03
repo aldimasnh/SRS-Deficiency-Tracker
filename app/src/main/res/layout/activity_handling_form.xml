@@ -40,6 +40,7 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:textColor="@color/black"
                 android:fontFamily="@font/seguisb"
                 android:text="Jenis Perlakuan:"
                 android:textSize="20sp" />
@@ -62,6 +63,16 @@
                 android:layout_height="wrap_content">
 
             </com.google.android.material.chip.ChipGroup>
+
+            <LinearLayout
+                android:id="@+id/llDosisHand"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="25dp"
+                android:layout_marginBottom="500dp"
+                android:orientation="vertical">
+
+            </LinearLayout>
 
         </LinearLayout>
 

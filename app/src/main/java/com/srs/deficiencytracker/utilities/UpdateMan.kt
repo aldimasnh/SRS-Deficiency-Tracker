@@ -309,7 +309,7 @@ class UpdateMan {
             @SuppressLint("SetTextI18n")
             object : StringRequest(
                 Method.POST,
-                "$urlMaps/checkMapsPk1.php",
+                "$urlMaps/checkMapsPk2.php",
                 Response.Listener { response ->
                     try {
                         val jObj = JSONObject(response)
@@ -442,10 +442,11 @@ class UpdateMan {
                             PemupukanSQL(context)
                         if (success == 1) {
                             val version = jObj.getInt("version")
-                            databaseHandler.deleteDb()
+                            databaseHandler.deleteDbPupuk()
                             val dataListPupukArray = jObj.getJSONObject("listPupuk")
                             val beforeSplitId = dataListPupukArray.getJSONArray("id")
                             val beforeSplitNama = dataListPupukArray.getJSONArray("nama")
+                            val beforeSplitSatuan = dataListPupukArray.getJSONArray("satuan")
                             Log.d("parsing", beforeSplitNama.toString())
 
                             var idArray = ArrayList<Int>()
@@ -458,12 +459,18 @@ class UpdateMan {
                                 namaArray.add(beforeSplitNama.getString(i))
                             }
 
+                            var satuanArray = ArrayList<String>()
+                            for (i in 0 until beforeSplitSatuan.length()) {
+                                satuanArray.add(beforeSplitSatuan.getString(i))
+                            }
+
                             var statusQuery = 1L
                             for (i in 0 until idArray.size) {
                                 val status = databaseHandler.addPupuk(
                                     PupukList(
                                         db_id = idArray[i],
-                                        db_pupuk = namaArray[i]
+                                        db_pupuk = namaArray[i],
+                                        db_satuan = satuanArray[i]
                                     )
                                 )
                                 if (status == 0L) {
@@ -476,7 +483,7 @@ class UpdateMan {
                                 prefManager.version = version
                             } else {
                                 Log.d("logPupuk", "Terjadi kesalahan, hubungi pengembang")
-                                databaseHandler.deleteDb()
+                                databaseHandler.deleteDbPupuk()
                             }
                         } else {
                             Log.d("logPupuk", "${jObj.getString(Database.TAG_MESSAGE)}")

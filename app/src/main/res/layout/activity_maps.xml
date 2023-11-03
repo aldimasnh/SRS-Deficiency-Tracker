@@ -473,6 +473,102 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:srcCompat="@drawable/baseline_add_24" />
 
+    <TextView
+        android:id="@+id/tvInfoSingle"
+        android:visibility="gone"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="10dp"
+        android:background="@drawable/bg_rounded"
+        android:padding="5dp"
+        android:fontFamily="@font/seguisbi"
+        android:text="PER TITIK"
+        android:textColor="@color/black"
+        android:textSize="11dp"
+        app:layout_constraintBottom_toBottomOf="@+id/fbSingle"
+        app:layout_constraintStart_toEndOf="@+id/fbSingle"
+        app:layout_constraintTop_toTopOf="@+id/fbSingle" />
+
+    <TextView
+        android:id="@+id/tvInfoMulti"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="10dp"
+        android:background="@drawable/bg_rounded"
+        android:fontFamily="@font/seguisbi"
+        android:padding="5dp"
+        android:text="BEBERAPA TITIK"
+        android:textColor="@color/black"
+        android:textSize="11dp"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="@+id/fbMultiple"
+        app:layout_constraintStart_toEndOf="@+id/fbMultiple"
+        app:layout_constraintTop_toTopOf="@+id/fbMultiple" />
+
+    <TextView
+        android:id="@+id/tvInfoBlok"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="10dp"
+        android:background="@drawable/bg_rounded"
+        android:fontFamily="@font/seguisbi"
+        android:padding="5dp"
+        android:text="BY BLOK"
+        android:textColor="@color/black"
+        android:textSize="11dp"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="@+id/fbBlok"
+        app:layout_constraintStart_toEndOf="@+id/fbBlok"
+        app:layout_constraintTop_toTopOf="@+id/fbBlok" />
+
+    <TextView
+        android:id="@+id/tvInfoSembuh"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="10dp"
+        android:background="@drawable/bg_rounded"
+        android:fontFamily="@font/seguisbi"
+        android:padding="5dp"
+        android:text="POKOK SEMBUH"
+        android:textColor="@color/black"
+        android:textSize="11dp"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="@+id/fbPokokSembuh"
+        app:layout_constraintStart_toEndOf="@+id/fbPokokSembuh"
+        app:layout_constraintTop_toTopOf="@+id/fbPokokSembuh" />
+
+    <TextView
+        android:id="@+id/tvInfoAct"
+        android:visibility="gone"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="10dp"
+        android:background="@drawable/bg_rounded"
+        android:padding="5dp"
+        android:fontFamily="@font/seguisbi"
+        android:text="PENANGANAN"
+        android:textColor="@color/black"
+        android:textSize="11dp"
+        app:layout_constraintBottom_toBottomOf="@+id/fbActionMaps"
+        app:layout_constraintEnd_toStartOf="@+id/fbActionMaps"
+        app:layout_constraintTop_toTopOf="@+id/fbActionMaps" />
+
+    <TextView
+        android:id="@+id/tvInfoCM"
+        android:visibility="gone"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="10dp"
+        android:background="@drawable/bg_rounded"
+        android:padding="5dp"
+        android:fontFamily="@font/seguisbi"
+        android:text="CENTER MAPS"
+        android:textColor="@color/black"
+        android:textSize="11dp"
+        app:layout_constraintBottom_toBottomOf="@+id/fbCenterMaps"
+        app:layout_constraintEnd_toStartOf="@+id/fbCenterMaps"
+        app:layout_constraintTop_toTopOf="@+id/fbCenterMaps" />
+
     <androidx.cardview.widget.CardView
         android:id="@+id/cvCardBottom"
         android:layout_width="match_parent"
