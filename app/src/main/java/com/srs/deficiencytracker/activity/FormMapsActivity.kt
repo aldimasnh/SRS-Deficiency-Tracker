@@ -28,6 +28,7 @@ import com.google.android.gms.location.LocationSettingsRequest
 import com.google.android.gms.location.LocationSettingsStatusCodes
 import com.google.android.gms.location.SettingsClient
 import com.google.android.material.snackbar.Snackbar
+import com.scottyab.rootbeer.RootBeer
 import com.srs.deficiencytracker.BuildConfig
 import com.srs.deficiencytracker.MainActivity
 import com.srs.deficiencytracker.R
@@ -100,6 +101,98 @@ open class FormMapsActivity : AppCompatActivity() {
     private var lat: Float? = null
     private var lon: Float? = null
     private var firstGPS = false
+
+    //ARRAY OF COORDINATES USED FOR LOCATION AUTH
+    var fid = arrayOf(
+        doubleArrayOf(
+            111.408675,
+            111.408675,
+            111.758455,
+            111.758455,
+            111.408675,
+            111.415813,
+            111.831606,
+            111.831606,
+            111.415813,
+            111.415813,
+            111.522889,
+            111.778679,
+            111.778679,
+            111.522889,
+            111.522889,
+            111.551442,
+            111.69421,
+            111.69421,
+            111.551442,
+            111.551442,
+            114.011924,
+            114.380888,
+            114.380888,
+            114.011924,
+            114.012,
+            113.9131,
+            111.7306,
+            111.7201,
+            111.7227,
+            111.7434,
+            111.6926,
+            111.7007,
+            111.7077,
+            111.7002,
+            111.8291,
+            111.8418,
+            111.8466,
+            111.8345,
+            111.5538,
+            111.683,
+            111.6849,
+            111.5739
+        ),
+        doubleArrayOf(
+            -2.0345828874789,
+            -1.73298620498991,
+            -1.73298620498991,
+            -2.0345828874789,
+            -2.0345828874789,
+            -2.1791351435831,
+            -2.1791351435831,
+            -2.48025115899208,
+            -2.48025115899208,
+            -2.1791351435831,
+            -2.56103863501886,
+            -2.56103863501886,
+            -2.71751284599304,
+            -2.71751284599304,
+            -2.56103863501886,
+            -2.79303608308732,
+            -2.79303608308732,
+            -2.88940425382344,
+            -2.88940425382344,
+            -2.79303608308732,
+            -2.85525898838978,
+            -2.85525898838978,
+            -3.29070134699975,
+            -3.29070134699975,
+            -2.855,
+            -2.7752,
+            -2.6267,
+            -2.6316,
+            -2.6622,
+            -2.6608,
+            -2.6092,
+            -2.6145,
+            -2.6085,
+            -2.5866,
+            -2.5136,
+            -2.5135,
+            -2.5311,
+            -2.5317,
+            -2.791,
+            -2.7988,
+            -2.8832,
+            -2.8861
+        )
+    )
 
     @SuppressLint("SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -403,7 +496,8 @@ open class FormMapsActivity : AppCompatActivity() {
                 rb_maps2.isChecked = true
 
                 for (i in blokArray.indices) {
-                    val namaBlok = "${blokArray[i]}${ttArray[i].substring(2, ttArray[i].lastIndex + 1)}"
+                    val namaBlok =
+                        "${blokArray[i]}${ttArray[i].substring(2, ttArray[i].lastIndex + 1)}"
                     if (!blokArrayList.contains(blokArray[i]) && pm.afdeling == afdelingArray[i] && pm.estate == estateArray[i]) {
                         blokArrayList.add(blokArray[i])
                         blokPlotArrayList.add(namaBlok)
@@ -506,32 +600,42 @@ open class FormMapsActivity : AppCompatActivity() {
                 Toasty.warning(this, "Silahkan isi data terlebih dahulu!", Toasty.LENGTH_LONG)
                     .show()
             } else {
+                val rootBeer = RootBeer(this@FormMapsActivity)
                 if (countYellowTrees.isEmpty()) {
                     Toasty.warning(this, "Tidak ada data pokok kuning!", Toasty.LENGTH_LONG).show()
+                } else if (rootBeer.isRooted) {
+                    checkGPSAndStartMapActivity()
+                } else if (mCurrentLocation!!.isFromMockProvider) {
+                    Toasty.error(
+                        this@FormMapsActivity,
+                        "Tidak diperkenankan menggunakan Mock Location pada perangkat anda.",
+                        Toast.LENGTH_LONG,
+                        true
+                    ).show()
+                    finish()
+                } else if (lon!! > fid[0][4] && lon!! < fid[0][2] && lat!! > fid[1][4] && lat!! < fid[1][2]) {
+                    //blok!!.text = "REG 2"
+                    checkGPSAndStartMapActivity()
+                } else if (lon!! > fid[0][8] && lon!! < fid[0][6] && lat!! > fid[1][8] && lat!! < fid[1][6]) {
+                    //blok!!.text = "REG 1"
+                    checkGPSAndStartMapActivity()
+                } else if (lon!! > fid[0][13] && lon!! < fid[0][11] && lat!! > fid[1][13] && lat!! < fid[1][11]) {
+                    //blok!!.text = "NBE"
+                    checkGPSAndStartMapActivity()
+                } else if (lon!! > fid[0][18] && lon!! < fid[0][16] && lat!! > fid[1][18] && lat!! < fid[1][16]) {
+                    //blok!!.text = "NSP"
+                    checkGPSAndStartMapActivity()
+                } else if (lon!! > 113.9131 && lon!! < 114.477 && lat!! > -3.3784 && lat!! < -2.7752) {
+                    //blok!!.text = "REG 3"
+                    checkGPSAndStartMapActivity()
                 } else {
-                    if (firstGPS) {
-                        stopLocationUpdates()
-
-                        pm.estate = est
-                        pm.afdeling = afd
-                        pm.blok = blok
-                        pm.blokPlot = blokPlot
-
-                        Toasty.info(this, "Mohon tunggu, sedang memproses peta..", Toasty.LENGTH_LONG).show()
-                        cvNext.visibility = View.GONE
-
-                        val intent =
-                            Intent(this, MapsActivity::class.java).putExtra("est", est)
-                                .putExtra("afd", afd)
-                                .putExtra("blok", blok)
-                                .putExtra("blokPlot", blokPlot)
-                                .putExtra("pos", "$lat$$lon")
-                        startActivity(intent)
-                        finishAffinity()
-                    } else {
-                        Toasty.warning(this, "Titik GPS belum didapatkan!", Toasty.LENGTH_LONG)
-                            .show()
-                    }
+                    //blok!!.text = ""
+                    Toasty.warning(
+                        this@FormMapsActivity,
+                        "Anda harus berada di lokasi PT. SSMS, Tbk. untuk melanjutkan",
+                        Toast.LENGTH_LONG,
+                        true
+                    ).show()
                 }
             }
         }
@@ -773,6 +877,7 @@ open class FormMapsActivity : AppCompatActivity() {
                             Log.i("currentPos", "PendingIntent unable to execute request.")
                         }
                     }
+
                     LocationSettingsStatusCodes.SETTINGS_CHANGE_UNAVAILABLE -> {
                         val errorMessage = "Location settings are inadequate, and cannot be " +
                                 "fixed here. Fix in Settings."
@@ -783,6 +888,32 @@ open class FormMapsActivity : AppCompatActivity() {
                 }
                 updateLocationUI()
             }
+    }
+
+    private fun checkGPSAndStartMapActivity() {
+        val pm = PrefManagerEstate(this@FormMapsActivity)
+        if (firstGPS) {
+            stopLocationUpdates()
+
+            pm.estate = est
+            pm.afdeling = afd
+            pm.blok = blok
+            pm.blokPlot = blokPlot
+
+            Toasty.info(this, "Mohon tunggu, sedang memproses peta..", Toasty.LENGTH_LONG).show()
+            cvNext.visibility = View.GONE
+
+            val intent = Intent(this, MapsActivity::class.java)
+                .putExtra("est", est)
+                .putExtra("afd", afd)
+                .putExtra("blok", blok)
+                .putExtra("blokPlot", blokPlot)
+                .putExtra("pos", "$lat$$lon")
+            startActivity(intent)
+            finishAffinity()
+        } else {
+            Toasty.warning(this, "Titik GPS belum didapatkan!", Toasty.LENGTH_LONG).show()
+        }
     }
 
     companion object {

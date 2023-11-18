@@ -7,7 +7,7 @@ plugins {
 android {
     def versionMajor = 1
     def versionMinor = 0
-    def versionPatch = 10
+    def versionPatch = 11
 
     namespace 'com.srs.deficiencytracker'
     compileSdk 33
@@ -85,4 +85,5 @@ dependencies {
     implementation 'org.osmdroid:osmdroid-android:6.1.17'
     implementation 'org.slf4j:slf4j-api:1.7.32'
     implementation 'org.slf4j:slf4j-android:1.7.32'
+    implementation 'com.scottyab:rootbeer-lib:0.0.7'
 }
